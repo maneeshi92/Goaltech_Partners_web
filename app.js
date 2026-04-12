@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Session / DB ─────────────────────────────────────────
     let pendingUser = null;
 
-    // API base URL — always point to Express backend explicitly
-    const API_BASE = 'http://localhost:5000';
+    // API base URL — dynamically adapt to whatever domain we are on (e.g. Render)
+    const API_BASE = '';
 
     // LocalStorage user storage removed as per request.
     // Session state is now handled via gt_auth and gt_userName.
