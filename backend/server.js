@@ -22,14 +22,24 @@ app.use((req, res, next) => {
 // Serve static files from the root directory
 app.use(express.static(path.join(__dirname, '../')));
 
-// Database Connection
-const db = mysql.createConnection({
+const dbConfig = {
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     connectTimeout: 10000 // 10 second timeout for initial connection
-});
+};
+
+// Automatically enable SSL for TiDB Cloud connections
+if (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')) {
+    dbConfig.ssl = {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true
+    };
+}
+
+const db = mysql.createConnection(dbConfig);
 
 let isDbConnected = false;
 
