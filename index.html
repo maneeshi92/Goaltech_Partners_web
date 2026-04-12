@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoalTech | Register</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <div class="background-elements">
+        <div class="blur-sphere sphere-1"></div>
+        <div class="blur-sphere sphere-2"></div>
+        <div class="blur-sphere sphere-3"></div>
+    </div>
+
+    <div class="auth-wrapper">
+
+        <!-- ===================== REGISTRATION SCREEN ===================== -->
+        <div id="register-screen" class="auth-card">
+            <!-- Left branding panel -->
+            <div class="auth-left">
+                <div class="brand-logo">
+                    <i class="ph-fill ph-infinity"></i>
+                </div>
+                <h1 class="brand-title">GoalTech</h1>
+                <p class="brand-tagline">The all-in-one platform to manage, scale, and grow your business with
+                    confidence.</p>
+                <ul class="brand-perks">
+                    <li><i class="ph-fill ph-check-circle"></i> Smart business configuration</li>
+                    <li><i class="ph-fill ph-check-circle"></i> Real-time facility management</li>
+                    <li><i class="ph-fill ph-check-circle"></i> Multi-location scheduling</li>
+                    <li><i class="ph-fill ph-check-circle"></i> Powered by AI analytics</li>
+                </ul>
+                <div class="brand-footer-text">Already have an account? <a href="#" id="go-to-login">Sign In</a></div>
+            </div>
+
+            <!-- Right form panel -->
+            <div class="auth-right">
+                <!-- Mobile-only: Logo + Tab Switcher -->
+                <div class="mobile-auth-header">
+                    <div class="mobile-logo">
+                        <div class="brand-logo" style="width:36px;height:36px;font-size:1.25rem;margin:0;">
+                            <i class="ph-fill ph-infinity"></i>
+                        </div>
+                        <span class="mobile-logo-text">GoalTech</span>
+                    </div>
+                    <div class="mobile-tab-switcher">
+                        <a href="#" class="mobile-tab active" id="mobile-tab-register-reg">Register</a>
+                        <a href="#" class="mobile-tab" id="mobile-tab-login-reg">Sign In</a>
+                    </div>
+                </div>
+
+                <div class="auth-form-header">
+                    <h2>Create your account</h2>
+                    <p>Fill in your details to get started for free</p>
+                </div>
+
+                <form id="register-form">
+                    <!-- Name & Phone Row -->
+                    <div class="form-row-dual">
+                        <div class="input-group">
+                            <label for="reg-name">Full Name</label>
+                            <div class="input-wrapper">
+                                <i class="ph ph-user icon"></i>
+                                <input type="text" id="reg-name" placeholder="John Doe" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-phone">Phone Number</label>
+                            <div class="input-wrapper">
+                                <i class="ph ph-phone icon"></i>
+                                <input type="tel" id="reg-phone" placeholder="+91 98765 43210" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="input-group">
+                        <label for="reg-email">Email Address</label>
+                        <div class="input-wrapper" id="email-wrapper">
+                            <i class="ph ph-envelope-simple icon"></i>
+                            <input type="email" id="reg-email" placeholder="name@company.com" required>
+                            <span class="field-status" id="email-status"></span>
+                        </div>
+                    </div>
+
+                    <!-- Password with live complexity checker -->
+                    <div class="input-group">
+                        <label for="reg-password">Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock-key icon"></i>
+                            <input type="password" id="reg-password" placeholder="Create a strong password" required>
+                            <button type="button" class="toggle-password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                        <!-- Live Complexity Checklist -->
+                        <div class="pass-strength-grid" id="pass-strength">
+                            <span class="check-item" id="check-length"><i class="ph ph-x-circle"></i> 8+
+                                characters</span>
+                            <span class="check-item" id="check-upper"><i class="ph ph-x-circle"></i> Uppercase
+                                letter</span>
+                            <span class="check-item" id="check-number"><i class="ph ph-x-circle"></i> Has a
+                                number</span>
+                            <span class="check-item" id="check-special"><i class="ph ph-x-circle"></i> Special
+                                character</span>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password with live match indicator -->
+                    <div class="input-group">
+                        <label for="reg-confirm-password">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-shield-check icon"></i>
+                            <input type="password" id="reg-confirm-password" placeholder="Re-enter your password"
+                                required>
+                            <span class="field-status" id="confirm-status"></span>
+                        </div>
+                        <span class="match-label hidden" id="match-label">
+                            <i class="ph ph-check-circle"></i> Passwords match
+                        </span>
+                        <span class="nomatch-label hidden" id="nomatch-label">
+                            <i class="ph ph-x-circle"></i> Passwords don't match
+                        </span>
+                    </div>
+
+                    <!-- Error message -->
+                    <div id="register-error" class="error-message hidden">
+                        <i class="ph-fill ph-warning-circle"></i>
+                        <span class="error-text">Please check your inputs</span>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="reg-submit-btn">
+                        <span class="btn-text">Send Verification Code</span>
+                        <i class="ph ph-paper-plane-tilt btn-icon"></i>
+                        <div class="spinner hidden"></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===================== LOGIN SCREEN ===================== -->
+        <div id="login-screen" class="auth-card hidden">
+            <div class="auth-left">
+                <div class="brand-logo">
+                    <i class="ph-fill ph-infinity"></i>
+                </div>
+                <h1 class="brand-title">GoalTech</h1>
+                <p class="brand-tagline">Welcome back! Sign in to manage your business configuration.</p>
+                <ul class="brand-perks">
+                    <li><i class="ph-fill ph-check-circle"></i> Secure access to your data</li>
+                    <li><i class="ph-fill ph-check-circle"></i> Pick up right where you left off</li>
+                    <li><i class="ph-fill ph-check-circle"></i> Multi-location ready</li>
+                </ul>
+                <div class="brand-footer-text">New here? <a href="#" id="go-to-register">Create an account</a></div>
+            </div>
+            <div class="auth-right">
+                <!-- Mobile-only: Logo + Tab Switcher -->
+                <div class="mobile-auth-header">
+                    <div class="mobile-logo">
+                        <div class="brand-logo" style="width:36px;height:36px;font-size:1.25rem;margin:0;">
+                            <i class="ph-fill ph-infinity"></i>
+                        </div>
+                        <span class="mobile-logo-text">GoalTech</span>
+                    </div>
+                    <div class="mobile-tab-switcher">
+                        <a href="#" class="mobile-tab" id="mobile-tab-register-login">Register</a>
+                        <a href="#" class="mobile-tab active" id="mobile-tab-login-login">Sign In</a>
+                    </div>
+                </div>
+
+                <div class="auth-form-header">
+                    <h2>Welcome back</h2>
+                    <p>Sign in to your GoalTech account</p>
+                </div>
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="login-email">Email Address</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-envelope-simple icon"></i>
+                            <input type="email" id="login-email" placeholder="name@company.com" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password">Password <a href="#" class="forgot-link">Forgot
+                                password?</a></label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock-key icon"></i>
+                            <input type="password" id="login-password" placeholder="••••••••" required>
+                            <button type="button" class="toggle-password"><i class="ph ph-eye"></i></button>
+                        </div>
+                    </div>
+                    <div id="login-error" class="error-message hidden">
+                        <i class="ph-fill ph-warning-circle"></i>
+                        <span class="error-text">Invalid email or password</span>
+                    </div>
+                    <button type="submit" class="submit-btn" id="login-submit-btn">
+                        <span class="btn-text">Sign In</span>
+                        <i class="ph ph-arrow-right btn-icon"></i>
+                        <div class="spinner hidden"></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===================== OTP SCREEN ===================== -->
+        <div id="otp-screen" class="auth-card hidden otp-card">
+            <div class="auth-left otp-left">
+                <div class="brand-logo otp-brand-logo">
+                    <i class="ph-fill ph-envelope-open"></i>
+                </div>
+                <h2>Check your inbox!</h2>
+                <p class="brand-tagline">We've sent a 6-digit verification code to:</p>
+                <strong id="user-email-display" class="otp-email-display">your@email.com</strong>
+                <p class="brand-tagline" style="margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.7;">Can't find it?
+                    Check your spam folder or request a resend.</p>
+            </div>
+            <div class="auth-right">
+                <!-- Mobile-only OTP context header -->
+                <div class="mobile-auth-header mobile-otp-header">
+                    <div class="mobile-logo">
+                        <div class="brand-logo" style="width:36px;height:36px;font-size:1.25rem;margin:0;">
+                            <i class="ph-fill ph-envelope-open"></i>
+                        </div>
+                        <span class="mobile-logo-text">Check your inbox</span>
+                    </div>
+                    <p class="mobile-otp-email-hint">Code sent to: <strong id="user-email-display-mobile"></strong></p>
+                </div>
+
+                <div class="auth-form-header">
+                    <h2>Enter verification code</h2>
+                    <p>Type the 6-digit OTP code sent to your email</p>
+                </div>
+
+                <div class="otp-container">
+                    <input type="text" maxlength="1" class="otp-input" data-index="0" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input" data-index="1" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input" data-index="2" inputmode="numeric">
+                    <span class="otp-divider">—</span>
+                    <input type="text" maxlength="1" class="otp-input" data-index="3" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input" data-index="4" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input" data-index="5" inputmode="numeric">
+                </div>
+
+                <div id="otp-hint" class="otp-hint">
+                    <i class="ph ph-lightbulb"></i> For demo purposes, use OTP: <strong>123456</strong>
+                </div>
+
+                <div id="otp-error" class="error-message hidden" style="margin-top: 1rem;">
+                    <i class="ph-fill ph-warning-circle"></i>
+                    <span class="error-text">Invalid or expired OTP. Please try again.</span>
+                </div>
+
+                <button id="verify-otp-btn" class="submit-btn" style="margin-top: 1.5rem;">
+                    <span class="btn-text">Continue to Dashboard</span>
+                    <i class="ph ph-arrow-right btn-icon"></i>
+                    <div class="spinner hidden"></div>
+                </button>
+
+                <div class="resend-row">
+                    <span>Didn't receive the code?</span>
+                    <a href="#" id="resend-otp">Resend OTP</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Overlay -->
+        <div class="success-overlay" id="success-overlay">
+            <i class="ph-fill ph-check-circle success-icon"></i>
+            <div class="success-text">Verification complete!</div>
+            <p>Taking you to your dashboard…</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

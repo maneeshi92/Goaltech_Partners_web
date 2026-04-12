@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Configuration | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dashboard-body">
+    <!-- Background Elements (shared with login) -->
+    <div class="background-elements">
+        <div class="blur-sphere sphere-1" style="top: -5%; left: 10%;"></div>
+        <div class="blur-sphere sphere-2" style="bottom: 10%; right: -5%;"></div>
+        <div class="blur-sphere sphere-3"></div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="#" class="brand-link" id="brand-home-btn"
+                style="display: flex; align-items: center; text-decoration: none;">
+                <div class="logo-container sidebar-logo">
+                    <i class="ph-fill ph-infinity"></i>
+                </div>
+                <span class="logo-text">Goal Tech</span>
+            </a>
+            <button class="mobile-close" id="mobile-close">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <i class="ph ph-squares-four nav-icon"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="ph ph-briefcase nav-icon"></i>
+                        <span>Business Mgmt</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="ph ph-calendar-check nav-icon"></i>
+                        <span>Bookings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="ph ph-currency-circle-dollar nav-icon"></i>
+                        <span>Earnings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="ph ph-shield-check nav-icon"></i>
+                        <span>Admin</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a href="#" class="nav-link">
+                        <i class="ph ph-user-circle nav-icon"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="index.html" class="logout-btn">
+                <i class="ph ph-sign-out"></i>
+                <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Top Navigation Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-toggle" id="mobile-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="search-container">
+                    <i class="ph ph-magnifying-glass search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search resources, bookings...">
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <div class="notification-wrapper">
+                    <button class="icon-btn notification-btn" id="notification-toggle">
+                        <i class="ph ph-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+
+                    <!-- Notification Dropdown -->
+                    <div class="notification-dropdown widget-glass" id="notification-panel">
+                        <div class="dropdown-header">
+                            <h3>Notifications</h3>
+                            <button class="mark-read-btn">Mark all as read</button>
+                        </div>
+                        <div class="notification-list">
+                            <!-- Unread Booking -->
+                            <div class="notification-item unread">
+                                <div class="notif-icon-wrapper bookings">
+                                    <i class="ph ph-calendar-plus"></i>
+                                </div>
+                                <div class="notif-content">
+                                    <p class="notif-text"><span class="highlight">Sarah Jenkins</span> booked a
+                                        <strong>Premium Consulting</strong> session.
+                                    </p>
+                                    <span class="notif-time">2 mins ago</span>
+                                </div>
+                                <div class="unread-dot"></div>
+                            </div>
+
+                            <!-- Unread Earnings -->
+                            <div class="notification-item unread">
+                                <div class="notif-icon-wrapper earnings">
+                                    <i class="ph ph-currency-dollar"></i>
+                                </div>
+                                <div class="notif-content">
+                                    <p class="notif-text">Payment of <strong>$450.00</strong> was successfully
+                                        processed.</p>
+                                    <span class="notif-time">1 hour ago</span>
+                                </div>
+                                <div class="unread-dot"></div>
+                            </div>
+
+                            <!-- Unread System -->
+                            <div class="notification-item unread">
+                                <div class="notif-icon-wrapper"
+                                    style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                                    <i class="ph ph-info"></i>
+                                </div>
+                                <div class="notif-content">
+                                    <p class="notif-text">Your latest business report is ready to download.</p>
+                                    <span class="notif-time">5 hours ago</span>
+                                </div>
+                                <div class="unread-dot"></div>
+                            </div>
+
+                            <!-- Read Booking -->
+                            <div class="notification-item">
+                                <div class="notif-icon-wrapper customers">
+                                    <i class="ph ph-users"></i>
+                                </div>
+                                <div class="notif-content">
+                                    <p class="notif-text">New user <span class="highlight">Michael Ross</span>
+                                        registered an account.</p>
+                                    <span class="notif-time">Yesterday</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-footer">
+                            <a href="#">View all notifications</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-profile">
+                    <div class="user-info">
+                        <span class="user-name">Maneeshi</span>
+                        <span class="user-role">Administrator</span>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=Maneeshi&background=6366f1&color=fff&rounded=true&bold=true"
+                        alt="User Avatar" class="avatar">
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard View Content -->
+        <div class="dashboard-content view-section active" id="view-dashboard">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Dashboard Overview</h1>
+                    <p class="page-subtitle">Welcome back, here's what's happening today.</p>
+                </div>
+                <div class="date-filter">
+                    <button class="filter-btn active">Today</button>
+                    <button class="filter-btn">Week</button>
+                    <button class="filter-btn">Month</button>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card widget-glass">
+                    <div class="kpi-header">
+                        <span class="kpi-title">Total Earnings</span>
+                        <div class="kpi-icon-wrapper earnings">
+                            <i class="ph ph-currency-dollar"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-body">
+                        <h2 class="kpi-value">$24,592.00</h2>
+                        <div class="kpi-trend positive">
+                            <i class="ph ph-trend-up"></i>
+                            <span>+14.5% from last month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card widget-glass">
+                    <div class="kpi-header">
+                        <span class="kpi-title">Active Bookings</span>
+                        <div class="kpi-icon-wrapper bookings">
+                            <i class="ph ph-calendar-plus"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-body">
+                        <h2 class="kpi-value">1,204</h2>
+                        <div class="kpi-trend positive">
+                            <i class="ph ph-trend-up"></i>
+                            <span>+8.2% from last month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card widget-glass">
+                    <div class="kpi-header">
+                        <span class="kpi-title">Total Customers</span>
+                        <div class="kpi-icon-wrapper customers">
+                            <i class="ph ph-users"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-body">
+                        <h2 class="kpi-value">8,932</h2>
+                        <div class="kpi-trend negative">
+                            <i class="ph ph-trend-down"></i>
+                            <span>-2.4% from last month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card widget-glass">
+                    <div class="kpi-header">
+                        <span class="kpi-title">Conversion Rate</span>
+                        <div class="kpi-icon-wrapper conversion">
+                            <i class="ph ph-chart-line-up"></i>
+                        </div>
+                    </div>
+                    <div class="kpi-body">
+                        <h2 class="kpi-value">4.6%</h2>
+                        <div class="kpi-trend positive">
+                            <i class="ph ph-trend-up"></i>
+                            <span>+1.1% from last month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-grid">
+                <div class="chart-card widget-glass main-chart">
+                    <div class="chart-header">
+                        <h3>Revenue Trends</h3>
+                        <button class="icon-btn small"><i class="ph ph-dots-three"></i></button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card widget-glass side-chart">
+                    <div class="chart-header">
+                        <h3>Booking Status</h3>
+                        <button class="icon-btn small"><i class="ph ph-dots-three"></i></button>
+                    </div>
+                    <div class="chart-container doughnut-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Table -->
+            <div class="table-card widget-glass">
+                <div class="chart-header">
+                    <h3>Recent Bookings</h3>
+                    <a href="#" class="view-all">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Customer</th>
+                                <th>Service</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>#BK-0924</td>
+                                <td>
+                                    <div class="customer-cell">
+                                        <div class="customer-avatar">SJ</div>
+                                        <span>Sarah Jenkins</span>
+                                    </div>
+                                </td>
+                                <td>Premium Consulting</td>
+                                <td>Oct 24, 2023</td>
+                                <td><span class="status-badge completed">Completed</span></td>
+                                <td>$450.00</td>
+                            </tr>
+                            <tr>
+                                <td>#BK-0925</td>
+                                <td>
+                                    <div class="customer-cell">
+                                        <div class="customer-avatar blue">MR</div>
+                                        <span>Michael Ross</span>
+                                    </div>
+                                </td>
+                                <td>Basic Audit</td>
+                                <td>Oct 25, 2023</td>
+                                <td><span class="status-badge pending">Pending</span></td>
+                                <td>$150.00</td>
+                            </tr>
+                            <tr>
+                                <td>#BK-0926</td>
+                                <td>
+                                    <div class="customer-cell">
+                                        <div class="customer-avatar green">AL</div>
+                                        <span>Amanda Lee</span>
+                                    </div>
+                                </td>
+                                <td>Strategy Session</td>
+                                <td>Oct 25, 2023</td>
+                                <td><span class="status-badge active">In Progress</span></td>
+                                <td>$800.00</td>
+                            </tr>
+                            <tr>
+                                <td>#BK-0927</td>
+                                <td>
+                                    <div class="customer-cell">
+                                        <div class="customer-avatar purple">DW</div>
+                                        <span>David Wright</span>
+                                    </div>
+                                </td>
+                                <td>Enterprise Setup</td>
+                                <td>Oct 26, 2023</td>
+                                <td><span class="status-badge cancelled">Cancelled</span></td>
+                                <td>$1,200.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business Management View Content -->
+        <div class="dashboard-content view-section hidden-view" id="view-business-management">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" id="page-dynamic-title">Business Management</h1>
+                    <p class="page-subtitle">Manage your registered businesses and subsidiaries.</p>
+                </div>
+            </div>
+
+            <div class="empty-state-container widget-glass">
+                <div class="empty-state-content">
+                    <div class="empty-icon-wrapper">
+                        <div class="blur-sphere"
+                            style="width: 150px; height: 150px; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #6366f1; opacity: 0.2; pointer-events: none;">
+                        </div>
+                        <i class="ph ph-buildings"></i>
+                    </div>
+                    <h2>No Businesses Found</h2>
+                    <p>It looks like you haven't added any businesses yet. Get started by setting up your first business
+                        profile to manage operations, bookings, and earnings.</p>
+                    <button class="submit-btn primary-action-btn">
+                        <i class="ph ph-plus btn-icon-left"></i>
+                        <span class="btn-text">Add New Business</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Business Wizard View Content -->
+        <div class="dashboard-content view-section hidden-view" id="view-add-business">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Add New Business</h1>
+                    <p class="page-subtitle">Let's get your new facility configured.</p>
+                </div>
+                <button class="icon-btn" id="cancel-add-business" title="Cancel">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <div class="wizard-container widget-glass">
+                <!-- Wizard Progress -->
+                <div class="wizard-progress">
+                    <div class="progress-step active">
+                        <div class="step-indicator">1</div>
+                        <span class="step-label">Basic Details</span>
+                    </div>
+                    <div class="progress-connector"></div>
+                    <div class="progress-step">
+                        <div class="step-indicator">2</div>
+                        <span class="step-label">Facilities</span>
+                    </div>
+                    <div class="progress-connector"></div>
+                    <div class="progress-step">
+                        <div class="step-indicator">3</div>
+                        <span class="step-label">Pricing & Rules</span>
+                    </div>
+                </div>
+
+                <div class="wizard-content">
+                    <!-- Wizard Step 1: Basic Details (Compact View) -->
+                    <div class="wizard-step active compact-wizard-form" id="wizard-step-1">
+
+                        <div class="form-header">
+                            <h3 class="step-title">Basic Facility Details</h3>
+                            <p class="step-desc">Configure the primary settings for your new business.</p>
+                        </div>
+
+                        <div class="form-body">
+                            <!-- Business Type Row -->
+                            <div class="horizontal-row">
+                                <div class="row-label">
+                                    <label>Business Type</label>
+                                    <span class="row-desc">Select the type of facility you own.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="custom-select-wrapper" id="business-type-selector">
+                                        <div class="custom-select-trigger">
+                                            <div class="selected-value">
+                                                <i class="ph ph-squares-four text-muted" id="selected-type-icon"></i>
+                                                <span id="selected-type-text">Select a facility type...</span>
+                                            </div>
+                                            <i class="ph ph-caret-down arrow"></i>
+                                        </div>
+                                        <div class="custom-select-options widget-glass">
+                                            <div class="select-search-box">
+                                                <i class="ph ph-magnifying-glass"></i>
+                                                <input type="text" id="type-search-input" placeholder="Search types...">
+                                            </div>
+                                            <ul class="options-list" id="type-options-list">
+                                                <li class="option-item" data-value="turf" data-needs-mode="true"
+                                                    data-icon="ph-soccer-ball">
+                                                    <i class="ph ph-soccer-ball"></i><span>Football Turf</span>
+                                                </li>
+                                                <li class="option-item" data-value="badminton" data-needs-mode="true"
+                                                    data-icon="ph-tennis-ball">
+                                                    <i class="ph ph-tennis-ball"></i><span>Badminton Court</span>
+                                                </li>
+                                                <li class="option-item" data-value="swimming" data-needs-mode="false"
+                                                    data-icon="ph-waves">
+                                                    <i class="ph ph-waves"></i><span>Swimming Pool</span>
+                                                </li>
+                                                <li class="option-item" data-value="cricket" data-needs-mode="true"
+                                                    data-icon="ph-baseball">
+                                                    <i class="ph ph-baseball"></i><span>Cricket Ground</span>
+                                                </li>
+                                                <li class="option-item" data-value="tennis" data-needs-mode="true"
+                                                    data-icon="ph-tennis-ball">
+                                                    <i class="ph ph-tennis-ball"></i><span>Tennis Court</span>
+                                                </li>
+                                                <li class="option-item" data-value="gym" data-needs-mode="false"
+                                                    data-icon="ph-barbell">
+                                                    <i class="ph ph-barbell"></i><span>Gymnasium</span>
+                                                </li>
+                                                <li class="option-item" data-value="other" data-needs-mode="false"
+                                                    data-icon="ph-dots-three-circle">
+                                                    <i class="ph ph-dots-three-circle"></i><span>Other Facility</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Facility Mode Row -->
+                            <div class="horizontal-row hidden" id="facility-mode-group">
+                                <div class="row-label">
+                                    <label>Facility Mode</label>
+                                    <span class="row-desc">Does this facility operate indoors, outdoors, or both?</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="segmented-control mini-dimension">
+                                        <label class="segment-btn">
+                                            <input type="radio" name="facilityMode" value="indoor">
+                                            <div class="segment-content">
+                                                <i class="ph ph-house"></i>
+                                                <span>Indoor</span>
+                                            </div>
+                                        </label>
+                                        <label class="segment-btn">
+                                            <input type="radio" name="facilityMode" value="outdoor">
+                                            <div class="segment-content">
+                                                <i class="ph ph-tree"></i>
+                                                <span>Outdoor</span>
+                                            </div>
+                                        </label>
+                                        <label class="segment-btn">
+                                            <input type="radio" name="facilityMode" value="both">
+                                            <div class="segment-content">
+                                                <i class="ph ph-infinity"></i>
+                                                <span>Both</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Business Name Row -->
+                            <div class="horizontal-row">
+                                <div class="row-label">
+                                    <label for="businessName">Business Name</label>
+                                    <span class="row-desc">This name will be visible to your customers.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="input-wrapper">
+                                        <i class="ph ph-buildings icon"></i>
+                                        <input type="text" id="businessName" placeholder="e.g. Goal Tech Arena..."
+                                            required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- (Future steps would go here) -->
+                </div>
+
+                <!-- Wizard Navigation Footer -->
+                <div class="wizard-footer">
+                    <button class="secondary-btn" id="wizard-back-btn" disabled>Back</button>
+                    <button class="submit-btn primary-action-btn" id="wizard-next-btn" disabled>
+                        <span class="btn-text">Continue</span>
+                        <i class="ph ph-arrow-right btn-icon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+
+    <script src="dashboard.js"></script>
+</body>
+
+</html>
