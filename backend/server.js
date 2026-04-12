@@ -70,6 +70,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../index.html'));
 });
 
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dashboard.html'));
+});
+
 // --- Register Endpoint ---
 app.post('/register', checkDbConnection, (req, res) => {
     const { name, email, phone, password } = req.body;

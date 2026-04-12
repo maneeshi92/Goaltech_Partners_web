@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p>Setting up your workspace…</p>
         `;
         successOverlay.className = 'success-overlay reg-success active';
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 2200);
+        setTimeout(() => { window.location.href = '/dashboard'; }, 2200);
     }
 
     // Called on successful login
@@ -450,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p class="wb-sub">Taking you to your dashboard…</p>
         `;
         successOverlay.className = 'success-overlay login-success active';
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 2200);
+        setTimeout(() => { window.location.href = '/dashboard'; }, 2200);
     }
 
 });

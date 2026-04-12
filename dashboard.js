@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     } else {
         // Redirect to login if no active session
-        window.location.href = 'index.html';
+        window.location.href = '/';
     }
 
     // --- Logout ---
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             localStorage.removeItem('gt_auth');
             localStorage.removeItem('gt_userName');
-            window.location.href = 'index.html';
+            window.location.href = '/';
         });
     }
 
