@@ -25,3 +25,7 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+
+    - name: Trigger Render Deployment (Only on Success)
+      if: success()
+      run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"

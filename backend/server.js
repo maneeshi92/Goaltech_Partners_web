@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -75,7 +76,7 @@ app.get('/dashboard', (req, res) => {
 });
 
 // --- Register Endpoint ---
-app.post('/register', checkDbConnection, (req, res) => {
+app.post('/register', checkDbConnection, async (req, res) => {
     const { name, email, phone, password } = req.body;
     console.log('Registration attempt for:', email);
 
@@ -83,19 +84,25 @@ app.post('/register', checkDbConnection, (req, res) => {
         return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
-    const query = 'INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)';
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const query = 'INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)';
 
-    db.query(query, [name, email, phone, password], (err, result) => {
-        if (err) {
-            console.error('Registration Query Error:', err.message);
-            if (err.code === 'ER_DUP_ENTRY') {
-                return res.status(400).json({ success: false, message: 'Email already exists' });
+        db.query(query, [name, email, phone, hashedPassword], (err, result) => {
+            if (err) {
+                console.error('Registration Query Error:', err.message);
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(400).json({ success: false, message: 'Email already exists' });
+                }
+                return res.status(500).json({ success: false, message: `Database error: ${err.message}` });
             }
-            return res.status(500).json({ success: false, message: `Database error: ${err.message}` });
-        }
-        console.log('User registered successfully:', email);
-        res.status(201).json({ success: true, message: 'User registered successfully' });
-    });
+            console.log('User registered successfully:', email);
+            res.status(201).json({ success: true, message: 'User registered successfully' });
+        });
+    } catch (err) {
+        console.error('Password Hashing Error:', err);
+        res.status(500).json({ success: false, message: 'Internal server error while securing password' });
+    }
 });
 
 // --- Login Endpoint ---
@@ -108,7 +115,7 @@ app.post('/login', checkDbConnection, (req, res) => {
     }
 
     const query = 'SELECT * FROM users WHERE email = ?';
-    db.query(query, [email], (err, results) => {
+    db.query(query, [email], async (err, results) => {
         if (err) {
             console.error('Login Query Error:', err.message);
             return res.status(500).json({ success: false, message: `Database error: ${err.message}` });
@@ -121,7 +128,10 @@ app.post('/login', checkDbConnection, (req, res) => {
 
         const user = results[0];
 
-        if (password !== user.password) {
+        // Check if password matches using bcrypt
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (!isMatch) {
             console.log('Login failed: Password mismatch');
             return res.status(401).json({ success: false, message: 'Incorrect password' });
         }
