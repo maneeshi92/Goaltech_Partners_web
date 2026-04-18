@@ -29,6 +29,7 @@ async function migrate() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
                 name VARCHAR(255) NOT NULL,
+                status ENUM('active', 'inactive') DEFAULT 'active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
@@ -40,6 +41,7 @@ async function migrate() {
                 label VARCHAR(255),
                 icon VARCHAR(100),
                 mode VARCHAR(50),
+                status ENUM('active', 'inactive') DEFAULT 'active',
                 hours JSON,
                 amenities JSON,
                 price DECIMAL(10, 2),

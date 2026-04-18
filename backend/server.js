@@ -257,10 +257,67 @@ app.get('/businesses', authenticateToken, checkDbConnection, (req, res) => {
     db.query(query, [userId], (err, results) => {
         if (err) {
             console.error('Error fetching businesses:', err);
-            return res.status(500).json({ success: false, message: 'Error fetching businesses' });
+            return res.status(500).json({ success: false, message: 'Database error' });
         }
         res.json({ success: true, businesses: results });
     });
+});
+
+// Create Business
+app.post('/businesses', authenticateToken, checkDbConnection, async (req, res) => {
+    const userId = req.user.id;
+    const { name, status, facilities } = req.body;
+
+    if (!name || !facilities) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const connection = await db.promise().getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Insert business
+        const [bizResult] = await connection.query('INSERT INTO businesses (user_id, name, status) VALUES (?, ?, ?)', [userId, name, status || 'active']);
+        const businessId = bizResult.insertId;
+
+        // 2. Insert facilities
+        if (facilities.length > 0) {
+            const facilityData = facilities.map(f => [
+                businessId,
+                f.type,
+                f.label,
+                f.icon,
+                f.mode,
+                f.status || 'active',
+                JSON.stringify(f.hours),
+                JSON.stringify(f.amenities),
+                f.price,
+                f.weekendPrice,
+                f.peakPrice,
+                f.peakStart,
+                f.peakEnd,
+                f.capacity,
+                f.description,
+                f.phone,
+                f.website
+            ]);
+
+            const facilityQuery = `INSERT INTO facilities 
+                (business_id, type, label, icon, mode, status, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
+                VALUES ?`;
+            
+            await connection.query(facilityQuery, [facilityData]);
+        }
+
+        await connection.commit();
+        res.json({ success: true, businessId });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error creating business:', err);
+        res.status(500).json({ success: false, message: 'Server error during creation' });
+    } finally {
+        connection.release();
+    }
 });
 
 // Get Single Business with facilities
@@ -320,7 +377,7 @@ app.get('/businesses/:id', authenticateToken, checkDbConnection, (req, res) => {
 app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res) => {
     const userId = req.user.id;
     const bizId = req.params.id;
-    const { name, facilities } = req.body;
+    const { name, status, facilities } = req.body;
 
     if (!name || !facilities) {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -330,8 +387,8 @@ app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res
     try {
         await connection.beginTransaction();
 
-        // 1. Update business name
-        await connection.query('UPDATE businesses SET name = ? WHERE id = ? AND user_id = ?', [name, bizId, userId]);
+        // 1. Update business
+        await connection.query('UPDATE businesses SET name = ?, status = ? WHERE id = ? AND user_id = ?', [name, status || 'active', bizId, userId]);
 
         // 2. Delete old facilities
         await connection.query('DELETE FROM facilities WHERE business_id = ?', [bizId]);
@@ -344,6 +401,7 @@ app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res
                 f.label,
                 f.icon,
                 f.mode,
+                f.status || 'active',
                 JSON.stringify(f.hours),
                 JSON.stringify(f.amenities),
                 f.price,
@@ -358,7 +416,7 @@ app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res
             ]);
 
             const facilityQuery = `INSERT INTO facilities 
-                (business_id, type, label, icon, mode, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
+                (business_id, type, label, icon, mode, status, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
                 VALUES ?`;
             
             await connection.query(facilityQuery, [facilityData]);

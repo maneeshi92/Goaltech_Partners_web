@@ -425,9 +425,18 @@
                                     <span class="row-desc">This name will appear on your public profile.</span>
                                 </div>
                                 <div class="row-input">
-                                    <div class="input-wrapper">
-                                        <i class="ph ph-buildings icon"></i>
-                                        <input type="text" id="businessName" placeholder="e.g. Goal Tech Arena..." required>
+                                    <div class="input-with-status">
+                                        <div class="input-wrapper" style="flex: 1;">
+                                            <i class="ph ph-buildings icon"></i>
+                                            <input type="text" id="businessName" placeholder="e.g. Goal Tech Arena..." required>
+                                        </div>
+                                        <div class="status-minimal">
+                                            <label class="switch">
+                                                <input type="checkbox" id="business-status-toggle" checked>
+                                                <span class="slider round"></span>
+                                            </label>
+                                            <span class="status-tiny active" id="business-status-text">Active</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -544,8 +553,17 @@
                             <!-- Sub-step B: facility details for the chosen type -->
                             <div class="builder-substep" id="builder-substep-b">
                                 <div class="builder-substep-header">
-                                    <button class="chip-btn" id="substep-b-back"><i class="ph ph-arrow-left"></i> Back</button>
-                                    <h4 id="substep-b-title">Configure Facility</h4>
+                                    <div style="display:flex; align-items:center; gap:1rem;">
+                                        <button class="chip-btn" id="substep-b-back"><i class="ph ph-arrow-left"></i> Back</button>
+                                        <h4 id="substep-b-title">Configure Facility</h4>
+                                    </div>
+                                    <div class="status-toggle-wrap">
+                                        <label class="switch">
+                                            <input type="checkbox" id="facility-status-toggle" checked>
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <span class="status-text active" id="facility-status-text">Active</span>
+                                    </div>
                                 </div>
 
                                 <div class="form-body" style="margin-top:1rem;">
@@ -788,11 +806,8 @@
                             </div><!-- /builder-substep-b -->
                         </div><!-- /type-builder-panel -->
 
-                        <!-- Add another type trigger (shown after ≥1 saved) -->
-                        <button type="button" class="add-another-type-btn hidden" id="add-another-type-btn">
-                            <i class="ph ph-plus-circle"></i>
-                            Add Another Business Type
-                        </button>
+                        <!-- The grid of saved service cards will be rendered here -->
+                        <div id="saved-types-list" class="saved-types-list businesses-list-grid"></div>
 
                     </div><!-- /setup-section-2 -->
                 </div><!-- /setup-board-content -->

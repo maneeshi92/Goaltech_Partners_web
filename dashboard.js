@@ -262,6 +262,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('tier-peak-edit').classList.remove('hidden');
     });
 
+    const bizStatusToggle   = document.getElementById('business-status-toggle');
+    const bizStatusText     = document.getElementById('business-status-text');
+    const facStatusToggle   = document.getElementById('facility-status-toggle');
+    const facStatusText     = document.getElementById('facility-status-text');
+
+    if (bizStatusToggle) {
+        bizStatusToggle.addEventListener('change', () => {
+            const isActive = bizStatusToggle.checked;
+            bizStatusText.textContent = isActive ? 'Active' : 'Inactive';
+            bizStatusText.className = `status-tiny ${isActive ? 'active' : 'inactive'}`;
+        });
+    }
+
+    if (facStatusToggle) {
+        facStatusToggle.addEventListener('change', () => {
+            const isActive = facStatusToggle.checked;
+            facStatusText.textContent = isActive ? 'Active' : 'Inactive';
+            facStatusText.className = `status-tiny ${isActive ? 'active' : 'inactive'}`;
+        });
+    }
+
     let currentStep = 1;
     let currentTypeDraft = { type: null, label: null, icon: null, needsMode: false, mode: null };
     let savedBusinessTypes = [];          // array of saved type objects
@@ -316,6 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTypeDraft   = { type: null, label: null, icon: null, needsMode: false, mode: null };
 
         if (businessNameInput) businessNameInput.value = '';
+        if (bizStatusToggle) {
+            bizStatusToggle.checked = true;
+            bizStatusText.textContent = 'Active';
+            bizStatusText.className = 'status-tiny active';
+        }
         resetSubstepA();
         resetSubstepBFields();
 
@@ -334,6 +360,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeSearchInput) typeSearchInput.value = '';
         facilityModeInputs.forEach(i => i.checked = false);
         if (facilityModeGroup) facilityModeGroup.classList.add('hidden');
+        if (facStatusToggle) {
+            facStatusToggle.checked = true;
+            facStatusText.textContent = 'Active';
+            facStatusText.className = 'status-tiny active';
+        }
         if (substepANext) substepANext.disabled = true;
 
         // Show A, hide B
@@ -404,16 +435,6 @@ document.addEventListener('DOMContentLoaded', () => {
         listGrid.classList.remove('hidden');
         listGrid.innerHTML = '';
 
-        // 🟢 Prepend Add New Business Card
-        const addCard = document.createElement('div');
-        addCard.className = 'business-card add-biz-card';
-        addCard.innerHTML = `
-            <div class="add-icon"><i class="ph ph-plus"></i></div>
-            <span>Add New Business</span>
-        `;
-        addCard.addEventListener('click', openAddWizard);
-        listGrid.appendChild(addCard);
-
         businesses.forEach(biz => {
             const card = document.createElement('div');
             card.className = 'business-card';
@@ -426,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="biz-icon-wrapper">
                         <i class="ph-fill ph-storefront"></i>
                     </div>
-                    <div class="biz-badge">Active</div>
+                    <div class="biz-badge ${biz.status === 'inactive' ? 'badge-inactive' : ''}">${biz.status === 'active' ? 'Active' : 'Inactive'}</div>
                 </div>
                 <div class="biz-card-body">
                     <div class="biz-owner">
@@ -460,6 +481,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             listGrid.appendChild(card);
         });
+
+        // 🟢 Append Add New Business Card at the end
+        const addCard = document.createElement('div');
+        addCard.className = 'business-card add-biz-card';
+        addCard.innerHTML = `
+            <div class="add-icon"><i class="ph ph-plus"></i></div>
+            <span>Add New Business</span>
+        `;
+        addCard.addEventListener('click', openAddWizard);
+        listGrid.appendChild(addCard);
 
         // Add Listeners
         listGrid.querySelectorAll('.edit-biz-btn').forEach(btn => {
@@ -538,11 +569,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 businessName = biz.name;
                 if (businessNameInput) businessNameInput.value = biz.name;
                 
+                if (bizStatusToggle) {
+                    const isActive = biz.status !== 'inactive';
+                    bizStatusToggle.checked = isActive;
+                    bizStatusText.textContent = isActive ? 'Active' : 'Inactive';
+                    bizStatusText.className = `status-tiny ${isActive ? 'active' : 'inactive'}`;
+                }
+
                 // Load Facilities
                 savedBusinessTypes = biz.facilities;
-                savedBusinessTypes.forEach((type, idx) => {
-                    renderSavedTypeCard(type, idx);
-                });
+                renderSavedTypesList();
+
+                // Hide builder when editing, we want to see the list first
+                if (builderPanel) builderPanel.classList.add('hidden');
 
                 // Update UI
                 const wizardTitle = viewAddBusiness.querySelector('.page-title');
@@ -571,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const payload = {
                 name: businessName,
+                status: bizStatusToggle && bizStatusToggle.checked ? 'active' : 'inactive',
                 facilities: savedBusinessTypes
             };
 
@@ -761,6 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const savedType = {
                 ...currentTypeDraft,
+                status: facStatusToggle && facStatusToggle.checked ? 'active' : 'inactive',
                 hours,
                 amenities,
                 price:        document.getElementById('facilityPrice')?.value || '',
@@ -775,78 +816,123 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             savedBusinessTypes.push(savedType);
-            renderSavedTypeCard(savedType, savedBusinessTypes.length - 1);
+            renderSavedTypesList();
 
-            // Hide builder panel, show "Add another" button
+            // Hide builder panel after saving a service
             if (builderPanel) builderPanel.classList.add('hidden');
-            if (addAnotherBtn) addAnotherBtn.classList.remove('hidden');
 
             updateLaunchBtn();
             showToast(`"${savedType.label}" saved successfully!`);
         });
     }
 
-    function renderSavedTypeCard(type, index) {
+    function renderSavedTypesList() {
         if (!savedTypesList) return;
-        const modeLabels = { indoor: 'Indoor', outdoor: 'Outdoor', both: 'Indoor & Outdoor' };
-        const modeStr = type.mode ? ` · ${modeLabels[type.mode]}` : '';
-        const amenityCount = type.amenities.length;
-        const openDays = Object.values(type.hours).filter(h => h.open).length;
-        let priceStr = type.price ? `₹${type.price}/hr Base` : 'No base price';
-        if (type.weekendPrice) priceStr += ` · ₹${type.weekendPrice}/hr Wknd`;
-        if (type.peakPrice) priceStr += ` · ₹${type.peakPrice}/hr Peak`;
+        savedTypesList.innerHTML = '';
+        savedTypesList.className = 'businesses-list-grid saved-services-grid'; // Use same grid as main dashboard
 
-        const card = document.createElement('div');
-        card.className = 'saved-type-card';
-        card.dataset.index = index;
-        card.innerHTML = `
-            <div class="saved-type-card-main">
-                <div class="saved-type-icon"><i class="ph-fill ${type.icon}"></i></div>
-                <div class="saved-type-info">
-                    <div class="saved-type-name">${type.label}${modeStr}</div>
-                    <div class="saved-type-summary">
-                        <span><i class="ph ph-users"></i> Max ${type.capacity || 'N/A'}</span>
-                        <span><i class="ph ph-calendar-check"></i> ${openDays} Days</span>
-                        <span><i class="ph ph-tag"></i> <strong>${priceStr}</strong></span>
+        // 1. Add Existing Services as cards
+        savedBusinessTypes.forEach((type, index) => {
+            const card = document.createElement('div');
+            card.className = 'business-card service-card';
+            
+            const modeLabels = { indoor: 'Indoor', outdoor: 'Outdoor', both: 'Indoor & Outdoor' };
+            const modeStr = type.mode ? modeLabels[type.mode] : '';
+            const openDays = Object.values(type.hours).filter(h => h.open).length;
+
+            card.innerHTML = `
+                <div class="biz-card-header">
+                    <div class="biz-icon-wrapper">
+                        <i class="ph-fill ${type.icon || 'ph-buildings'}"></i>
+                    </div>
+                    <div class="biz-badge ${type.status === 'inactive' ? 'badge-inactive' : ''}">${type.status === 'active' ? 'Active' : 'Inactive'}</div>
+                </div>
+                <div class="biz-card-body">
+                    <div class="biz-name">${type.label}</div>
+                    <div class="biz-meta-info">
+                        <div class="meta-item">
+                            <i class="ph ph-calendar-check"></i>
+                            <span>${openDays} Open Days</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="ph ph-users"></i>
+                            <span>Max ${type.capacity || 'N/A'} Capacity</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="ph ph-tag"></i>
+                            <span>₹${type.price || 0}/hr base</span>
+                        </div>
                     </div>
                 </div>
-                <div class="saved-type-actions">
-                    <button class="saved-type-action edit" title="Edit" data-index="${index}"><i class="ph ph-pencil-simple"></i></button>
-                    <button class="saved-type-action remove" title="Remove" data-index="${index}"><i class="ph ph-trash"></i></button>
+                <div class="biz-card-footer">
+                    <div class="biz-actions">
+                        <button type="button" class="biz-btn biz-btn-manage edit-service-btn" data-index="${index}">
+                            <i class="ph ph-pencil-simple"></i> Edit
+                        </button>
+                        <button type="button" class="biz-btn biz-btn-view remove-service-btn" data-index="${index}">
+                            <i class="ph ph-trash"></i> Remove
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
-
-        // Edit
-        card.querySelector('.saved-type-action.edit').addEventListener('click', () => {
-            // Pull this type back for editing
-            loadTypeIntoBuilder(type);
-            savedBusinessTypes.splice(index, 1);
-            card.remove();
-            // Show builder, hide 'add another' if no types left
-            if (builderPanel) builderPanel.classList.remove('hidden');
-            if (savedBusinessTypes.length === 0 && addAnotherBtn) addAnotherBtn.classList.add('hidden');
-            updateLaunchBtn();
-        });
-
-        // Remove
-        card.querySelector('.saved-type-action.remove').addEventListener('click', () => {
-            savedBusinessTypes.splice(index, 1);
-            card.remove();
-            updateLaunchBtn();
-            if (savedBusinessTypes.length === 0) {
+            `;
+            
+            // Listeners
+            card.querySelector('.edit-service-btn').addEventListener('click', () => {
+                loadTypeIntoBuilder(type);
+                savedBusinessTypes.splice(index, 1);
+                renderSavedTypesList();
                 if (builderPanel) builderPanel.classList.remove('hidden');
-                if (addAnotherBtn) addAnotherBtn.classList.add('hidden');
-                resetSubstepA();
-            }
+                updateLaunchBtn();
+            });
+
+            card.querySelector('.remove-service-btn').addEventListener('click', () => {
+                savedBusinessTypes.splice(index, 1);
+                renderSavedTypesList();
+                updateLaunchBtn();
+            });
+
+            savedTypesList.appendChild(card);
         });
 
-        savedTypesList.appendChild(card);
+        // 2. Add "Add Service" Card (Ghost card)
+        const addCard = document.createElement('div');
+        addCard.className = 'business-card add-biz-card add-service-ghost-card';
+        addCard.innerHTML = `
+            <div class="add-icon"><i class="ph ph-plus"></i></div>
+            <span>Add Service</span>
+        `;
+        addCard.addEventListener('click', () => {
+            if (builderPanel) builderPanel.classList.remove('hidden');
+            // Reset wizard to substep A
+            resetSubstepA();
+            renderSavedTypesList(); // Re-render to show builder active? No, just show panel.
+        });
+        savedTypesList.appendChild(addCard);
+    }
+
+    // Call this instead of renderSavedTypeCard
+    function updateWizardTypesUI() {
+        renderSavedTypesList();
+        
+        // Hide/Show builder based on if someone just clicked add or if we have 0 types
+        if (savedBusinessTypes.length === 0) {
+            if (builderPanel) builderPanel.classList.remove('hidden');
+        } else {
+            // If we have types, we usually show the list and hide builder until "Add Service" is clicked
+            // But we can check if a draft is being edited.
+        }
     }
 
     function loadTypeIntoBuilder(type) {
-        // Populate sub-step A
         currentTypeDraft = { ...type };
+        
+        if (facStatusToggle) {
+            const isActive = type.status !== 'inactive';
+            facStatusToggle.checked = isActive;
+            facStatusText.textContent = isActive ? 'Active' : 'Inactive';
+            facStatusText.className = `status-tiny ${isActive ? 'active' : 'inactive'}`;
+        }
+
         if (selectedTypeText) selectedTypeText.textContent = type.label;
         if (selectedTypeIcon) selectedTypeIcon.className = `ph-fill ${type.icon}`;
         typeOptions.forEach(o => {
