@@ -139,7 +139,7 @@ app.post('/login', checkDbConnection, (req, res) => {
         const token = jwt.sign(
             { id: user.id, email: user.email },
             process.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '1h' }
+            { expiresIn: '24h' }
         );
 
         console.log('Login successful for:', email);
@@ -147,11 +147,232 @@ app.post('/login', checkDbConnection, (req, res) => {
             success: true,
             token: token,
             user: {
+                id: user.id,
                 name: user.name,
                 email: user.email
             }
         });
     });
+});
+
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+        if (err) return res.status(403).json({ success: false, message: 'Forbidden' });
+        req.user = user;
+        next();
+    });
+};
+
+// --- Business Endpoints ---
+
+// Create Business
+app.post('/businesses', authenticateToken, checkDbConnection, (req, res) => {
+    const { name, facilities } = req.body;
+    const userId = req.user.id;
+
+    if (!name || !facilities || !Array.isArray(facilities)) {
+        return res.status(400).json({ success: false, message: 'Invalid data' });
+    }
+
+    db.beginTransaction(err => {
+        if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
+
+        const businessQuery = 'INSERT INTO businesses (user_id, name) VALUES (?, ?)';
+        db.query(businessQuery, [userId, name], (err, result) => {
+            if (err) {
+                return db.rollback(() => {
+                    res.status(500).json({ success: false, message: 'Error creating business' });
+                });
+            }
+
+            const businessId = result.insertId;
+            const facilityQuery = `INSERT INTO facilities 
+                (business_id, type, label, icon, mode, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
+                VALUES ?`;
+
+            const facilityData = facilities.map(f => [
+                businessId,
+                f.type,
+                f.label,
+                f.icon,
+                f.mode,
+                JSON.stringify(f.hours),
+                JSON.stringify(f.amenities),
+                f.price || null,
+                f.weekendPrice || null,
+                f.peakPrice || null,
+                f.peakStart || null,
+                f.peakEnd || null,
+                f.capacity || null,
+                f.description || '',
+                f.phone || '',
+                f.website || ''
+            ]);
+
+            db.query(facilityQuery, [facilityData], (err, result) => {
+                if (err) {
+                    return db.rollback(() => {
+                        console.error('Error inserting facilities:', err);
+                        res.status(500).json({ success: false, message: 'Error creating facilities' });
+                    });
+                }
+
+                db.commit(err => {
+                    if (err) {
+                        return db.rollback(() => {
+                            res.status(500).json({ success: false, message: 'Commit error' });
+                        });
+                    }
+                    res.status(201).json({ success: true, message: 'Business created successfully', businessId });
+                });
+            });
+        });
+    });
+});
+
+// Get Businesses
+app.get('/businesses', authenticateToken, checkDbConnection, (req, res) => {
+    const userId = req.user.id;
+    console.log(`Fetching businesses for user ID: ${userId}`);
+    const query = `
+        SELECT b.*, 
+               u.name as owner_name,
+               u.email as owner_email,
+               GROUP_CONCAT(f.type) as facility_types,
+               COUNT(f.id) as facility_count
+        FROM businesses b
+        JOIN users u ON b.user_id = u.id
+        LEFT JOIN facilities f ON b.id = f.business_id
+        WHERE b.user_id = ?
+        GROUP BY b.id, u.name, u.email
+        ORDER BY b.created_at DESC
+    `;
+
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('Error fetching businesses:', err);
+            return res.status(500).json({ success: false, message: 'Error fetching businesses' });
+        }
+        res.json({ success: true, businesses: results });
+    });
+});
+
+// Get Single Business with facilities
+app.get('/businesses/:id', authenticateToken, checkDbConnection, (req, res) => {
+    const userId = req.user.id;
+    const bizId = req.params.id;
+
+    const query = `
+        SELECT b.id as biz_id, b.name as biz_name, b.user_id,
+               f.id as fac_id, f.type, f.label, f.icon, f.mode, f.hours, f.amenities, 
+               f.price, f.weekendPrice, f.peakPrice, f.peakStart, f.peakEnd, 
+               f.capacity, f.description, f.phone, f.website
+        FROM businesses b
+        LEFT JOIN facilities f ON b.id = f.business_id
+        WHERE b.id = ? AND b.user_id = ?
+    `;
+
+    db.query(query, [bizId, userId], (err, results) => {
+        if (err) {
+            console.error('Error fetching business details:', err);
+            return res.status(500).json({ success: false, message: 'Error fetching business details' });
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).json({ success: false, message: 'Business not found' });
+        }
+
+        const business = {
+            id: results[0].biz_id,
+            name: results[0].biz_name,
+            facilities: results.filter(r => r.fac_id !== null).map(r => ({
+                id: r.fac_id,
+                type: r.type,
+                label: r.label,
+                icon: r.icon,
+                mode: r.mode,
+                hours: typeof r.hours === 'string' ? JSON.parse(r.hours) : r.hours,
+                amenities: typeof r.amenities === 'string' ? JSON.parse(r.amenities) : r.amenities,
+                price: r.price,
+                weekendPrice: r.weekendPrice,
+                peakPrice: r.peakPrice,
+                peakStart: r.peakStart,
+                peakEnd: r.peakEnd,
+                capacity: r.capacity,
+                description: r.description,
+                phone: r.phone,
+                website: r.website
+            }))
+        };
+
+        res.json({ success: true, business });
+    });
+});
+
+
+// Update Business
+app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res) => {
+    const userId = req.user.id;
+    const bizId = req.params.id;
+    const { name, facilities } = req.body;
+
+    if (!name || !facilities) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const connection = await db.promise().getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Update business name
+        await connection.query('UPDATE businesses SET name = ? WHERE id = ? AND user_id = ?', [name, bizId, userId]);
+
+        // 2. Delete old facilities
+        await connection.query('DELETE FROM facilities WHERE business_id = ?', [bizId]);
+
+        // 3. Insert new facilities
+        if (facilities.length > 0) {
+            const facilityData = facilities.map(f => [
+                bizId,
+                f.type,
+                f.label,
+                f.icon,
+                f.mode,
+                JSON.stringify(f.hours),
+                JSON.stringify(f.amenities),
+                f.price,
+                f.weekendPrice,
+                f.peakPrice,
+                f.peakStart,
+                f.peakEnd,
+                f.capacity,
+                f.description,
+                f.phone,
+                f.website
+            ]);
+
+            const facilityQuery = `INSERT INTO facilities 
+                (business_id, type, label, icon, mode, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
+                VALUES ?`;
+            
+            await connection.query(facilityQuery, [facilityData]);
+        }
+
+        await connection.commit();
+        res.json({ success: true, message: 'Business updated successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error updating business:', err);
+        res.status(500).json({ success: false, message: 'Server error during update' });
+    } finally {
+        connection.release();
+    }
 });
 
 const PORT = process.env.PORT || 5000;

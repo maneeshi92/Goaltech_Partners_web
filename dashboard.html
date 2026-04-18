@@ -375,7 +375,7 @@
                 </div>
             </div>
 
-            <div class="empty-state-container widget-glass">
+            <div class="empty-state-container widget-glass" id="business-empty-state">
                 <div class="empty-state-content">
                     <div class="empty-icon-wrapper">
                         <div class="blur-sphere"
@@ -393,6 +393,8 @@
                     </button>
                 </div>
             </div>
+
+            <div class="businesses-list-grid hidden" id="businesses-list-grid"></div>
         </div>
 
         <!-- Add Business Wizard View Content -->
@@ -407,153 +409,424 @@
                 </button>
             </div>
 
-            <div class="wizard-container widget-glass">
-                <!-- Wizard Progress -->
-                <div class="wizard-progress">
-                    <div class="progress-step active">
-                        <div class="step-indicator">1</div>
-                        <span class="step-label">Basic Details</span>
-                    </div>
-                    <div class="progress-connector"></div>
-                    <div class="progress-step">
-                        <div class="step-indicator">2</div>
-                        <span class="step-label">Facilities</span>
-                    </div>
-                    <div class="progress-connector"></div>
-                    <div class="progress-step">
-                        <div class="step-indicator">3</div>
-                        <span class="step-label">Pricing & Rules</span>
-                    </div>
-                </div>
+            <div class="setup-board-container widget-glass">
+                <div class="setup-board-content">
 
-                <div class="wizard-content">
-                    <!-- Wizard Step 1: Basic Details (Compact View) -->
-                    <div class="wizard-step active compact-wizard-form" id="wizard-step-1">
-
+                    <!-- ═══════ SECTION 1 : Business Name ═══════ -->
+                    <div class="setup-section compact-wizard-form" id="setup-section-1">
                         <div class="form-header">
-                            <h3 class="step-title">Basic Facility Details</h3>
-                            <p class="step-desc">Configure the primary settings for your new business.</p>
+                            <h3 class="step-title">What's your business called?</h3>
+                            <p class="step-desc">Enter the name your customers will see when they book with you.</p>
                         </div>
-
                         <div class="form-body">
-                            <!-- Business Type Row -->
-                            <div class="horizontal-row">
-                                <div class="row-label">
-                                    <label>Business Type</label>
-                                    <span class="row-desc">Select the type of facility you own.</span>
-                                </div>
-                                <div class="row-input">
-                                    <div class="custom-select-wrapper" id="business-type-selector">
-                                        <div class="custom-select-trigger">
-                                            <div class="selected-value">
-                                                <i class="ph ph-squares-four text-muted" id="selected-type-icon"></i>
-                                                <span id="selected-type-text">Select a facility type...</span>
-                                            </div>
-                                            <i class="ph ph-caret-down arrow"></i>
-                                        </div>
-                                        <div class="custom-select-options widget-glass">
-                                            <div class="select-search-box">
-                                                <i class="ph ph-magnifying-glass"></i>
-                                                <input type="text" id="type-search-input" placeholder="Search types...">
-                                            </div>
-                                            <ul class="options-list" id="type-options-list">
-                                                <li class="option-item" data-value="turf" data-needs-mode="true"
-                                                    data-icon="ph-soccer-ball">
-                                                    <i class="ph ph-soccer-ball"></i><span>Football Turf</span>
-                                                </li>
-                                                <li class="option-item" data-value="badminton" data-needs-mode="true"
-                                                    data-icon="ph-tennis-ball">
-                                                    <i class="ph ph-tennis-ball"></i><span>Badminton Court</span>
-                                                </li>
-                                                <li class="option-item" data-value="swimming" data-needs-mode="false"
-                                                    data-icon="ph-waves">
-                                                    <i class="ph ph-waves"></i><span>Swimming Pool</span>
-                                                </li>
-                                                <li class="option-item" data-value="cricket" data-needs-mode="true"
-                                                    data-icon="ph-baseball">
-                                                    <i class="ph ph-baseball"></i><span>Cricket Ground</span>
-                                                </li>
-                                                <li class="option-item" data-value="tennis" data-needs-mode="true"
-                                                    data-icon="ph-tennis-ball">
-                                                    <i class="ph ph-tennis-ball"></i><span>Tennis Court</span>
-                                                </li>
-                                                <li class="option-item" data-value="gym" data-needs-mode="false"
-                                                    data-icon="ph-barbell">
-                                                    <i class="ph ph-barbell"></i><span>Gymnasium</span>
-                                                </li>
-                                                <li class="option-item" data-value="other" data-needs-mode="false"
-                                                    data-icon="ph-dots-three-circle">
-                                                    <i class="ph ph-dots-three-circle"></i><span>Other Facility</span>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Facility Mode Row -->
-                            <div class="horizontal-row hidden" id="facility-mode-group">
-                                <div class="row-label">
-                                    <label>Facility Mode</label>
-                                    <span class="row-desc">Does this facility operate indoors, outdoors, or both?</span>
-                                </div>
-                                <div class="row-input">
-                                    <div class="segmented-control mini-dimension">
-                                        <label class="segment-btn">
-                                            <input type="radio" name="facilityMode" value="indoor">
-                                            <div class="segment-content">
-                                                <i class="ph ph-house"></i>
-                                                <span>Indoor</span>
-                                            </div>
-                                        </label>
-                                        <label class="segment-btn">
-                                            <input type="radio" name="facilityMode" value="outdoor">
-                                            <div class="segment-content">
-                                                <i class="ph ph-tree"></i>
-                                                <span>Outdoor</span>
-                                            </div>
-                                        </label>
-                                        <label class="segment-btn">
-                                            <input type="radio" name="facilityMode" value="both">
-                                            <div class="segment-content">
-                                                <i class="ph ph-infinity"></i>
-                                                <span>Both</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Business Name Row -->
                             <div class="horizontal-row">
                                 <div class="row-label">
                                     <label for="businessName">Business Name</label>
-                                    <span class="row-desc">This name will be visible to your customers.</span>
+                                    <span class="row-desc">This name will appear on your public profile.</span>
                                 </div>
                                 <div class="row-input">
                                     <div class="input-wrapper">
                                         <i class="ph ph-buildings icon"></i>
-                                        <input type="text" id="businessName" placeholder="e.g. Goal Tech Arena..."
-                                            required>
+                                        <input type="text" id="businessName" placeholder="e.g. Goal Tech Arena..." required>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <!-- (Future steps would go here) -->
-                </div>
 
-                <!-- Wizard Navigation Footer -->
-                <div class="wizard-footer">
-                    <button class="secondary-btn" id="wizard-back-btn" disabled>Back</button>
-                    <button class="submit-btn primary-action-btn" id="wizard-next-btn" disabled>
-                        <span class="btn-text">Continue</span>
-                        <i class="ph ph-arrow-right btn-icon"></i>
+                    <hr class="section-divider">
+
+                    <!-- ═══════ SECTION 2 : Multi Business Type Builder ═══════ -->
+                    <div class="setup-section compact-wizard-form" id="setup-section-2">
+                        <div class="form-header">
+                            <h3 class="step-title">Define Your Business Types</h3>
+                            <p class="step-desc">Add one or more facility types. Each type can have its own hours, amenities and details.</p>
+                        </div>
+
+                        <!-- Saved type cards list -->
+                        <div id="saved-types-list" class="saved-types-list"></div>
+
+                        <!-- Type builder panel -->
+                        <div class="type-builder-panel widget-glass" id="type-builder-panel">
+
+                            <!-- Sub-step A: choose type & mode -->
+                            <div class="builder-substep active" id="builder-substep-a">
+                                <div class="builder-substep-header">
+                                    <h4>Select Facility Type &amp; Mode</h4>
+                                </div>
+                                <div class="form-body" style="margin-top:1rem;">
+
+                                    <!-- Type dropdown -->
+                                    <div class="horizontal-row">
+                                        <div class="row-label">
+                                            <label>Facility Type</label>
+                                            <span class="row-desc">What kind of sport or activity?</span>
+                                        </div>
+                                        <div class="row-input">
+                                            <div class="custom-select-wrapper" id="business-type-selector">
+                                                <div class="custom-select-trigger">
+                                                    <div class="selected-value">
+                                                        <i class="ph ph-squares-four text-muted" id="selected-type-icon"></i>
+                                                        <span id="selected-type-text">Select a facility type...</span>
+                                                    </div>
+                                                    <i class="ph ph-caret-down arrow"></i>
+                                                </div>
+                                                <div class="custom-select-options widget-glass">
+                                                    <div class="select-search-box">
+                                                        <i class="ph ph-magnifying-glass"></i>
+                                                        <input type="text" id="type-search-input" placeholder="Search types...">
+                                                    </div>
+                                                    <ul class="options-list" id="type-options-list">
+                                                        <li class="option-item" data-value="turf" data-needs-mode="true" data-icon="ph-soccer-ball">
+                                                            <i class="ph ph-soccer-ball"></i><span>Football Turf</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="badminton" data-needs-mode="true" data-icon="ph-tennis-ball">
+                                                            <i class="ph ph-tennis-ball"></i><span>Badminton Court</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="swimming" data-needs-mode="false" data-icon="ph-waves">
+                                                            <i class="ph ph-waves"></i><span>Swimming Pool</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="cricket" data-needs-mode="true" data-icon="ph-baseball">
+                                                            <i class="ph ph-baseball"></i><span>Cricket Ground</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="tennis" data-needs-mode="true" data-icon="ph-tennis-ball">
+                                                            <i class="ph ph-tennis-ball"></i><span>Tennis Court</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="gym" data-needs-mode="false" data-icon="ph-barbell">
+                                                            <i class="ph ph-barbell"></i><span>Gymnasium</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="basketball" data-needs-mode="true" data-icon="ph-basketball">
+                                                            <i class="ph ph-basketball"></i><span>Basketball Court</span>
+                                                        </li>
+                                                        <li class="option-item" data-value="other" data-needs-mode="false" data-icon="ph-dots-three-circle">
+                                                            <i class="ph ph-dots-three-circle"></i><span>Other Facility</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mode (shown only when needed) -->
+                                    <div class="horizontal-row hidden" id="facility-mode-group">
+                                        <div class="row-label">
+                                            <label>Facility Mode</label>
+                                            <span class="row-desc">Indoor, outdoor, or both?</span>
+                                        </div>
+                                        <div class="row-input">
+                                            <div class="segmented-control mini-dimension">
+                                                <label class="segment-btn">
+                                                    <input type="radio" name="facilityMode" value="indoor">
+                                                    <div class="segment-content"><i class="ph ph-house"></i><span>Indoor</span></div>
+                                                </label>
+                                                <label class="segment-btn">
+                                                    <input type="radio" name="facilityMode" value="outdoor">
+                                                    <div class="segment-content"><i class="ph ph-tree"></i><span>Outdoor</span></div>
+                                                </label>
+                                                <label class="segment-btn">
+                                                    <input type="radio" name="facilityMode" value="both">
+                                                    <div class="segment-content"><i class="ph ph-infinity"></i><span>Both</span></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <!-- Sub-step A CTA -->
+                                <div class="substep-footer">
+                                    <button class="submit-btn primary-action-btn substep-cta" id="substep-a-next" disabled>
+                                        <span class="btn-text">Configure Facility</span>
+                                        <i class="ph ph-arrow-right btn-icon"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sub-step B: facility details for the chosen type -->
+                            <div class="builder-substep" id="builder-substep-b">
+                                <div class="builder-substep-header">
+                                    <button class="chip-btn" id="substep-b-back"><i class="ph ph-arrow-left"></i> Back</button>
+                                    <h4 id="substep-b-title">Configure Facility</h4>
+                                </div>
+
+                                <div class="form-body" style="margin-top:1rem;">
+
+                                    <!-- Working Hours -->
+                                    <div class="horizontal-row">
+                                        <div class="row-label">
+                                            <label>Working Hours</label>
+                                            <span class="row-desc">Set the days and hours this facility is open.</span>
+                                        </div>
+                                        <div class="row-input working-hours-input">
+                                            <div class="hours-bulk-row">
+                                                <span class="hours-bulk-label">Apply to all open days:</span>
+                                                <input type="time" id="bulk-open" value="06:00" class="time-input">
+                                                <span class="time-sep">–</span>
+                                                <input type="time" id="bulk-close" value="22:00" class="time-input">
+                                                <button class="chip-btn" id="apply-bulk-hours"><i class="ph ph-copy"></i> Apply</button>
+                                            </div>
+                                            <div class="hours-grid" id="hours-grid">
+                                                <div class="day-row" data-day="Monday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check" checked><span class="day-slider"></span><span class="day-name">Mon</span></label>
+                                                    <input type="time" class="time-input open-time" value="06:00">
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="22:00">
+                                                    <span class="hours-status open">Open</span>
+                                                </div>
+                                                <div class="day-row" data-day="Tuesday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check" checked><span class="day-slider"></span><span class="day-name">Tue</span></label>
+                                                    <input type="time" class="time-input open-time" value="06:00">
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="22:00">
+                                                    <span class="hours-status open">Open</span>
+                                                </div>
+                                                <div class="day-row" data-day="Wednesday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check" checked><span class="day-slider"></span><span class="day-name">Wed</span></label>
+                                                    <input type="time" class="time-input open-time" value="06:00">
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="22:00">
+                                                    <span class="hours-status open">Open</span>
+                                                </div>
+                                                <div class="day-row" data-day="Thursday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check" checked><span class="day-slider"></span><span class="day-name">Thu</span></label>
+                                                    <input type="time" class="time-input open-time" value="06:00">
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="22:00">
+                                                    <span class="hours-status open">Open</span>
+                                                </div>
+                                                <div class="day-row" data-day="Friday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check" checked><span class="day-slider"></span><span class="day-name">Fri</span></label>
+                                                    <input type="time" class="time-input open-time" value="06:00">
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="22:00">
+                                                    <span class="hours-status open">Open</span>
+                                                </div>
+                                                <div class="day-row" data-day="Saturday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check" checked><span class="day-slider"></span><span class="day-name">Sat</span></label>
+                                                    <input type="time" class="time-input open-time" value="07:00">
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="23:00">
+                                                    <span class="hours-status open">Open</span>
+                                                </div>
+                                                <div class="day-row" data-day="Sunday">
+                                                    <label class="day-toggle"><input type="checkbox" class="day-check"><span class="day-slider"></span><span class="day-name">Sun</span></label>
+                                                    <input type="time" class="time-input open-time" value="08:00" disabled>
+                                                    <span class="time-sep">–</span>
+                                                    <input type="time" class="time-input close-time" value="20:00" disabled>
+                                                    <span class="hours-status closed">Closed</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Amenities -->
+                                    <div class="horizontal-row">
+                                        <div class="row-label">
+                                            <label>Amenities</label>
+                                            <span class="row-desc">Select all amenities available at this facility type.</span>
+                                        </div>
+                                        <div class="row-input">
+                                            <div class="amenity-chips" id="amenity-chips">
+                                                <button type="button" class="amenity-chip" data-amenity="parking"><i class="ph ph-car"></i> Parking</button>
+                                                <button type="button" class="amenity-chip" data-amenity="wifi"><i class="ph ph-wifi-high"></i> Wi-Fi</button>
+                                                <button type="button" class="amenity-chip" data-amenity="locker"><i class="ph ph-lock-key"></i> Lockers</button>
+                                                <button type="button" class="amenity-chip" data-amenity="shower"><i class="ph ph-shower"></i> Showers</button>
+                                                <button type="button" class="amenity-chip" data-amenity="cafeteria"><i class="ph ph-coffee"></i> Cafeteria</button>
+                                                <button type="button" class="amenity-chip" data-amenity="ac"><i class="ph ph-thermometer-cold"></i> A/C</button>
+                                                <button type="button" class="amenity-chip" data-amenity="lights"><i class="ph ph-lightbulb"></i> Floodlights</button>
+                                                <button type="button" class="amenity-chip" data-amenity="firstaid"><i class="ph ph-first-aid"></i> First Aid</button>
+                                                <button type="button" class="amenity-chip" data-amenity="cctv"><i class="ph ph-video-camera"></i> CCTV</button>
+                                                <button type="button" class="amenity-chip" data-amenity="spectator"><i class="ph ph-stadium"></i> Spectator Area</button>
+                                                <button type="button" class="amenity-chip" data-amenity="rental"><i class="ph ph-bag"></i> Equipment Rental</button>
+                                                <button type="button" class="amenity-chip" data-amenity="coaching"><i class="ph ph-whistle"></i> Coaching</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Advanced Pricing Block -->
+                                    <div class="horizontal-row pricing-block-row">
+                                        <div class="row-label">
+                                            <label for="facilityPrice">Pricing Structure</label>
+                                            <span class="row-desc">Set base, weekend, and peak hour rates.</span>
+                                        </div>
+                                        <div class="row-input">
+                                            <!-- Base Price -->
+                                            <div class="pricing-tier">
+                                                <div class="tier-header">
+                                                    <span class="tier-title"><i class="ph ph-tag"></i> Base Price (per hour)</span>
+                                                </div>
+                                                <div class="wizard-field-wrap tier-input-wrap">
+                                                    <i class="ph ph-currency-inr wf-icon"></i>
+                                                    <input type="number" id="facilityPrice" class="wizard-field" placeholder="e.g. 1500" min="0">
+                                                </div>
+                                            </div>
+
+                                            <!-- Add Option Toggles -->
+                                            <div class="pricing-toggles" id="pricing-toggles">
+                                                <button type="button" class="text-btn toggle-weekend" id="btn-add-weekend"><i class="ph ph-plus"></i> Add Weekend Rate</button>
+                                                <button type="button" class="text-btn toggle-peak" id="btn-add-peak"><i class="ph ph-plus"></i> Add Peak Hours Rate</button>
+                                            </div>
+
+                                            <!-- Weekend Price (Hidden by default) -->
+                                            <div class="pricing-tier nested-tier hidden" id="tier-weekend">
+                                                <div class="tier-summary-view hidden" id="tier-weekend-summary">
+                                                    <div class="summary-info">
+                                                        <i class="ph-fill ph-calendar-star tier-icon"></i> 
+                                                        <span class="summary-text">Weekend Rate: <strong id="val-weekend-price">₹1800</strong>/hr</span>
+                                                    </div>
+                                                    <div class="summary-actions">
+                                                        <button type="button" class="icon-btn edit-tier" id="btn-edit-weekend"><i class="ph ph-pencil-simple"></i></button>
+                                                        <button type="button" class="icon-btn remove-tier" id="btn-remove-weekend" title="Remove"><i class="ph ph-x"></i></button>
+                                                    </div>
+                                                </div>
+                                                <div class="tier-edit-view" id="tier-weekend-edit">
+                                                    <div class="tier-header">
+                                                        <span class="tier-title"><i class="ph ph-calendar-star"></i> Weekend Pricing (Sat & Sun)</span>
+                                                        <div class="tier-header-actions">
+                                                            <button type="button" class="icon-btn remove-tier" id="btn-cancel-weekend-edit" title="Cancel"><i class="ph ph-x"></i></button>
+                                                            <button type="button" class="chip-btn done-tier-btn" id="btn-done-weekend"><i class="ph ph-check"></i> Done</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="wizard-field-wrap tier-input-wrap">
+                                                        <i class="ph ph-currency-inr wf-icon"></i>
+                                                        <input type="number" id="facilityWeekendPrice" class="wizard-field" placeholder="e.g. 1800" min="0">
+                                                        <span class="tier-suffix">/ hr</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Peak Price (Hidden by default) -->
+                                            <div class="pricing-tier nested-tier hidden" id="tier-peak">
+                                                <div class="tier-summary-view hidden" id="tier-peak-summary">
+                                                    <div class="summary-info">
+                                                        <i class="ph-fill ph-lightning tier-icon"></i> 
+                                                        <span class="summary-text">Peak (<span id="val-peak-time">18:00 - 22:00</span>): <strong id="val-peak-price">₹2000</strong>/hr</span>
+                                                    </div>
+                                                    <div class="summary-actions">
+                                                        <button type="button" class="icon-btn edit-tier" id="btn-edit-peak"><i class="ph ph-pencil-simple"></i></button>
+                                                        <button type="button" class="icon-btn remove-tier" id="btn-remove-peak" title="Remove"><i class="ph ph-x"></i></button>
+                                                    </div>
+                                                </div>
+                                                <div class="tier-edit-view" id="tier-peak-edit">
+                                                    <div class="tier-header">
+                                                        <span class="tier-title"><i class="ph ph-lightning"></i> Peak Hours Pricing</span>
+                                                        <div class="tier-header-actions">
+                                                            <button type="button" class="icon-btn remove-tier" id="btn-cancel-peak-edit" title="Cancel"><i class="ph ph-x"></i></button>
+                                                            <button type="button" class="chip-btn done-tier-btn" id="btn-done-peak"><i class="ph ph-check"></i> Done</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="tier-time-range">
+                                                        <input type="time" id="facilityPeakStart" class="time-input" value="18:00">
+                                                        <span class="time-sep">to</span>
+                                                        <input type="time" id="facilityPeakEnd" class="time-input" value="22:00">
+                                                    </div>
+                                                    <div class="wizard-field-wrap tier-input-wrap" style="margin-top: 0.5rem;">
+                                                        <i class="ph ph-currency-inr wf-icon"></i>
+                                                        <input type="number" id="facilityPeakPrice" class="wizard-field" placeholder="e.g. 2000" min="0">
+                                                        <span class="tier-suffix">/ hr</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Capacity -->
+                                    <div class="horizontal-row">
+                                        <div class="row-label">
+                                            <label for="facilityCapacity">Max Capacity</label>
+                                            <span class="row-desc">Maximum number of people allowed at once.</span>
+                                        </div>
+                                        <div class="row-input">
+                                            <div class="wizard-field-wrap">
+                                                <i class="ph ph-users wf-icon"></i>
+                                                <input type="number" id="facilityCapacity" class="wizard-field" placeholder="e.g. 50" min="1">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div class="horizontal-row">
+                                        <div class="row-label">
+                                            <label for="facilityDesc">Description</label>
+                                            <span class="row-desc">A brief description shown to customers on your profile.</span>
+                                        </div>
+                                        <div class="row-input">
+                                            <textarea id="facilityDesc" class="textarea-input" placeholder="Tell customers what makes this facility special..." rows="3" maxlength="300"></textarea>
+                                            <span class="char-count" id="desc-char-count">0 / 300</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Contact & Website -->
+                                    <div class="horizontal-row">
+                                        <div class="row-label">
+                                            <label>Contact Info</label>
+                                            <span class="row-desc">Phone number and optional website for this facility type.</span>
+                                        </div>
+                                        <div class="row-input contact-pair">
+                                            <div class="wizard-field-wrap">
+                                                <i class="ph ph-phone wf-icon"></i>
+                                                <input type="tel" id="facilityPhone" class="wizard-field" placeholder="+91 98765 43210">
+                                            </div>
+                                            <div class="wizard-field-wrap">
+                                                <i class="ph ph-globe wf-icon"></i>
+                                                <input type="url" id="facilityWebsite" class="wizard-field" placeholder="https://yoursite.com">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div><!-- /form-body -->
+
+                                <!-- Save this type button -->
+                                <div class="substep-footer">
+                                    <button type="button" class="submit-btn primary-action-btn" id="save-business-type-btn">
+                                        <i class="ph ph-check-circle btn-icon-left"></i>
+                                        <span class="btn-text">Save This Business Type</span>
+                                        <div class="btn-glow"></div>
+                                    </button>
+                                    <p class="substep-hint">You can add more business types after saving this one.</p>
+                                </div>
+
+                            </div><!-- /builder-substep-b -->
+                        </div><!-- /type-builder-panel -->
+
+                        <!-- Add another type trigger (shown after ≥1 saved) -->
+                        <button type="button" class="add-another-type-btn hidden" id="add-another-type-btn">
+                            <i class="ph ph-plus-circle"></i>
+                            Add Another Business Type
+                        </button>
+
+                    </div><!-- /setup-section-2 -->
+                </div><!-- /setup-board-content -->
+
+                <!-- Global Action Footer -->
+                <div class="setup-board-footer">
+                    <button type="button" class="submit-btn primary-action-btn" id="launch-business-btn" disabled>
+                        <i class="ph ph-rocket-launch btn-icon-left"></i>
+                        <span class="btn-text">Save &amp; Launch Business</span>
+                        <div class="btn-glow"></div>
                     </button>
                 </div>
             </div>
         </div>
     </main>
+
+    <div class="modal-overlay hidden" id="biz-view-modal">
+        <div class="modal-content widget-glass">
+            <div class="modal-header">
+                <h2 id="modal-biz-name">Business Details</h2>
+                <button class="icon-btn" id="close-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="biz-detail-section">
+                    <h3>Registered Types</h3>
+                    <div id="modal-biz-types" class="detail-grid"></div>
+                </div>
+                <div class="biz-detail-section mt-4">
+                    <h3>Contact Info</h3>
+                    <p id="modal-biz-contact"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="mobile-overlay" id="mobile-overlay"></div>
 
