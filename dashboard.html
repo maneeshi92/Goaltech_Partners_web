@@ -71,6 +71,12 @@
                         <span>Admin</span>
                     </a>
                 </li>
+                <li class="nav-item" id="nav-approvals-item">
+                    <a href="#" class="nav-link" id="nav-approvals">
+                        <i class="ph ph-clipboard-text nav-icon"></i>
+                        <span>Approvals</span>
+                    </a>
+                </li>
                 <li class="nav-item mt-auto">
                     <a href="#" class="nav-link">
                         <i class="ph ph-user-circle nav-icon"></i>
@@ -386,9 +392,9 @@
                     <h2>No Businesses Found</h2>
                     <p>It looks like you haven't added any businesses yet. Get started by setting up your first business
                         profile to manage operations, bookings, and earnings.</p>
-                    <button class="submit-btn primary-action-btn">
+                    <button class="submit-btn primary-action-btn" id="btn-empty-register-biz">
                         <i class="ph ph-plus btn-icon-left"></i>
-                        <span class="btn-text">Add New Business</span>
+                        <span class="btn-text">Register Business</span>
                         <div class="btn-glow"></div>
                     </button>
                 </div>
@@ -788,6 +794,180 @@
                 </div>
             </div>
         </div>
+<!-- Business Registration View -->
+        <div class="dashboard-content view-section hidden-view" id="view-register-business">
+            <div class="page-header" style="max-width: 1000px; margin: 0 auto 1.5rem; width: 100%;">
+                <div>
+                    <h1 class="page-title">Register Business</h1>
+                    <p class="page-subtitle">Submit your business details for admin review.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" id="btn-cancel-register" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <i class="ph ph-x btn-icon-left"></i>
+                        <span>Cancel</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="setup-board-container widget-glass" style="max-width: 1000px; height: auto; min-height: 500px; margin-bottom: 2rem;">
+                <div class="setup-section active-wizard-section" style="padding: 2.5rem;">
+                    <div class="form-header" style="text-align: left; margin-bottom: 2.5rem;">
+                        <h3 class="step-title" style="font-size: 1.5rem; margin-bottom: 0.5rem;">Business Information</h3>
+                        <p class="step-desc">Please provide accurate legal and contact information for your business.</p>
+                    </div>
+
+                    <form id="form-register-business">
+                        <div class="form-body">
+                            <!-- Business Name -->
+                            <div class="horizontal-row">
+                                <div class="row-label">
+                                    <label for="regBizName">Business Name <span class="required" style="color: var(--danger);">*</span></label>
+                                    <span class="row-desc">The official legal name of your business.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="input-wrapper">
+                                        <i class="ph ph-buildings icon"></i>
+                                        <input type="text" id="regBizName" placeholder="e.g. Goal Tech Arena..." required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Name -->
+                            <div class="horizontal-row">
+                                <div class="row-label">
+                                    <label for="regBizContactName">Contact Name <span class="required" style="color: var(--danger);">*</span></label>
+                                    <span class="row-desc">Primary person responsible for this business.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="input-wrapper">
+                                        <i class="ph ph-user icon"></i>
+                                        <input type="text" id="regBizContactName" placeholder="e.g. John Doe" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Phone -->
+                            <div class="horizontal-row">
+                                <div class="row-label">
+                                    <label for="regBizContactPhone">Contact Phone <span class="required" style="color: var(--danger);">*</span></label>
+                                    <span class="row-desc">Phone number for admin verification.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="input-wrapper">
+                                        <i class="ph ph-phone icon"></i>
+                                        <input type="tel" id="regBizContactPhone" placeholder="e.g. +91 98765 43210" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- GST/VAT Number -->
+                            <div class="horizontal-row">
+                                <div class="row-label">
+                                    <label for="regBizGst">GST/VAT Number <span class="required" style="color: var(--danger);">*</span></label>
+                                    <span class="row-desc">Tax identification number for billing.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="input-wrapper">
+                                        <i class="ph ph-identification-card icon"></i>
+                                        <input type="text" id="regBizGst" placeholder="Enter tax ID" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Registered Address -->
+                            <div class="horizontal-row" style="border-bottom: none;">
+                                <div class="row-label">
+                                    <label for="regBizAddress">Registered Address <span class="required" style="color: var(--danger);">*</span></label>
+                                    <span class="row-desc">Official physical or registered address.</span>
+                                </div>
+                                <div class="row-input">
+                                    <div class="input-wrapper">
+                                        <i class="ph ph-map-pin icon"></i>
+                                        <textarea id="regBizAddress" class="textarea-input" placeholder="Full address details..." rows="3" required></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Rejection Notice -->
+                            <div id="reg-rejection-notice" class="hidden" style="margin-top: 1rem; background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--danger); padding: 1.25rem; border-radius: 8px;">
+                                <h4 style="color: var(--danger); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                                    <i class="ph-fill ph-warning-circle"></i> Application Rejected
+                                </h4>
+                                <p id="reg-rejection-reason" style="margin: 0; font-size: 0.95rem; color: var(--text-primary); line-height: 1.5;"></p>
+                            </div>
+                        </div>
+
+                        <!-- Footer Actions -->
+                        <div class="step-footer-actions" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: flex-end; gap: 1rem;">
+                            <button type="submit" class="submit-btn primary-action-btn" id="btn-submit-register" style="width: auto; min-width: 200px;">
+                                <span class="btn-text">Send For Review</span>
+                                <div class="btn-loader hidden"></div>
+                                <i class="ph ph-paper-plane-right btn-icon-right"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approvals Admin Dashboard View -->
+        <div class="dashboard-content view-section hidden-view" id="view-approvals">
+            <div class="page-header" style="max-width: 1100px; margin: 0 auto 1.5rem; width: 100%;">
+                <div>
+                    <h1 class="page-title">Pending Approvals</h1>
+                    <p class="page-subtitle">Review and manage new business registrations.</p>
+                </div>
+            </div>
+
+            <div class="approvals-container" style="max-width: 1100px; margin: 0 auto; width: 100%;">
+                <div id="approvals-list-grid" class="businesses-list-grid">
+                    <!-- Populated via JS -->
+                </div>
+
+                <div id="approvals-empty-state" class="empty-state-container hidden" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 20px; padding: 5rem 2rem;">
+                    <div class="empty-state-content">
+                        <div class="empty-icon-wrapper" style="margin-bottom: 1.5rem;">
+                            <i class="ph ph-check-circle" style="font-size: 4rem; color: var(--success); opacity: 0.8;"></i>
+                        </div>
+                        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">All Caught Up!</h2>
+                        <p style="color: var(--text-secondary);">There are no pending business registrations to review at this time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reject Modal -->
+        <div class="modal-overlay hidden dialog-overlay" id="reject-modal">
+            <div class="modal-content widget-glass unsaved-dialog" style="padding: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--danger);">Reject Application</h3>
+                <p style="margin-bottom: 1rem; color: var(--text-light); font-size: 0.9rem;">Please provide a reason for rejecting this business registration. The user will see this feedback to correct and resubmit.</p>
+                <textarea id="reject-reason-input" class="textarea-input" rows="4" placeholder="Reason for rejection..."
+                    style="width: 100%; margin-bottom: 1.5rem; resize: vertical;"></textarea>
+                <div class="dialog-actions">
+                    <button class="submit-btn ignore-btn" id="btn-cancel-reject">Cancel</button>
+                    <button class="submit-btn" style="background: var(--danger); border-color: var(--danger);" id="btn-confirm-reject">
+                        <span class="btn-text">Reject Application</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approve Modal -->
+        <div class="modal-overlay hidden dialog-overlay" id="approve-modal">
+            <div class="modal-content widget-glass unsaved-dialog" style="padding: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--success);">Approve Application</h3>
+                <p style="margin-bottom: 1rem; color: var(--text-light); font-size: 0.9rem;">You are about to approve this business registration. You can optionally add a welcome message or internal note below.</p>
+                <textarea id="approve-comment-input" class="textarea-input" rows="4" placeholder="Optional comment or note..."
+                    style="width: 100%; margin-bottom: 1.5rem; resize: vertical;"></textarea>
+                <div class="dialog-actions">
+                    <button class="submit-btn ignore-btn" id="btn-cancel-approve">Cancel</button>
+                    <button class="submit-btn primary-action-btn" id="btn-confirm-approve">
+                        <span class="btn-text">Approve Application</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <div class="modal-overlay hidden" id="biz-view-modal">
@@ -834,5 +1014,4 @@
 
     <script src="dashboard.js"></script>
 </body>
-
 </html>

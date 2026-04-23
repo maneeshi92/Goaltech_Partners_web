@@ -152,6 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 navigateToView('view-dashboard');
             } else if (linkText === 'Business Mgmt') {
                 navigateToView('view-business-management');
+            } else if (linkText === 'Approvals') {
+                navigateToView('view-approvals');
+                fetchApprovals();
             }
         });
     });
@@ -526,12 +529,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const types = biz.facility_types ? biz.facility_types.split(',') : [];
             const typeChips = types.map(t => `<span class="biz-type-chip">${t.replace(/_/g, ' ')}</span>`).join('');
 
+            let badgeClass = '';
+            let badgeText = '';
+            if (biz.status === 'active') { badgeClass = 'badge-active'; badgeText = 'Active'; }
+            else if (biz.status === 'inactive') { badgeClass = 'badge-inactive'; badgeText = 'Inactive'; }
+            else if (biz.status === 'pending') { badgeClass = 'badge-warning'; badgeText = 'Pending Approval'; }
+            else if (biz.status === 'rejected') { badgeClass = 'badge-danger'; badgeText = 'Rejected'; }
+
+            let actionButtons = '';
+            if (biz.status === 'active' || biz.status === 'inactive') {
+                actionButtons = `
+                    <button class="biz-btn biz-btn-manage edit-biz-btn" data-id="${biz.id}">
+                        <i class="ph ph-pencil-simple"></i> Edit
+                    </button>
+                    <button class="biz-btn biz-btn-view view-biz-btn" data-id="${biz.id}">
+                        <i class="ph ph-eye"></i> View
+                    </button>
+                `;
+            } else if (biz.status === 'rejected') {
+                actionButtons = `
+                    <button class="biz-btn biz-btn-manage retry-biz-btn" data-id="${biz.id}" data-name="${biz.name}" data-contact="${biz.contact_name || ''}" data-phone="${biz.contact_phone || ''}" data-gst="${biz.gst_vat || ''}" data-address="${biz.registered_address || ''}" data-reason="${biz.reject_reason || ''}">
+                        <i class="ph ph-arrow-counter-clockwise"></i> Fix & Resubmit
+                    </button>
+                `;
+            } else if (biz.status === 'pending') {
+                actionButtons = `
+                    <span style="font-size: 0.85rem; color: var(--text-muted);"><i class="ph ph-hourglass"></i> Under Review</span>
+                `;
+            }
+
             card.innerHTML = `
                 <div class="biz-card-header">
                     <div class="biz-icon-wrapper">
                         <i class="ph-fill ph-storefront"></i>
                     </div>
-                    <div class="biz-badge ${biz.status === 'inactive' ? 'badge-inactive' : ''}">${biz.status === 'active' ? 'Active' : 'Inactive'}</div>
+                    <div class="biz-badge ${badgeClass}">${badgeText}</div>
                 </div>
                 <div class="biz-card-body">
                     <div class="biz-owner">
@@ -554,26 +586,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="biz-card-footer">
                     <div class="biz-actions">
-                        <button class="biz-btn biz-btn-manage edit-biz-btn" data-id="${biz.id}">
-                            <i class="ph ph-pencil-simple"></i> Edit
-                        </button>
-                        <button class="biz-btn biz-btn-view view-biz-btn" data-id="${biz.id}">
-                            <i class="ph ph-eye"></i> View
-                        </button>
+                        ${actionButtons}
                     </div>
                 </div>
             `;
             listGrid.appendChild(card);
         });
 
-        // 🟢 Append Add New Business Card at the end
+        // 🟢 Append Register Business Card at the end
         const addCard = document.createElement('div');
         addCard.className = 'business-card add-biz-card';
         addCard.innerHTML = `
             <div class="add-icon"><i class="ph ph-plus"></i></div>
-            <span>Add New Business</span>
+            <span>Register Business</span>
         `;
-        addCard.addEventListener('click', openAddWizard);
+        addCard.addEventListener('click', () => {
+            document.getElementById('form-register-business').reset();
+            delete document.getElementById('form-register-business').dataset.editId;
+            document.getElementById('reg-rejection-notice').classList.add('hidden');
+            navigateToView('view-register-business');
+        });
         listGrid.appendChild(addCard);
 
         // Add Listeners
@@ -1605,4 +1637,294 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    // ═══════════════════════════════════════════════════
+    //  BUSINESS REGISTRATION & APPROVALS LOGIC
+    // ═══════════════════════════════════════════════════
+
+    // 1. Navigation & Setup
+    const btnEmptyRegister = document.getElementById('btn-empty-register-biz');
+    if (btnEmptyRegister) {
+        btnEmptyRegister.addEventListener('click', () => {
+            document.getElementById('form-register-business').reset();
+            delete document.getElementById('form-register-business').dataset.editId;
+            document.getElementById('reg-rejection-notice').classList.add('hidden');
+            navigateToView('view-register-business');
+        });
+    }
+
+    const btnCancelRegister = document.getElementById('btn-cancel-register');
+    if (btnCancelRegister) {
+        btnCancelRegister.addEventListener('click', () => {
+            navigateToView('view-business-management');
+        });
+    }
+
+    // Handle "Fix & Resubmit" clicks
+    document.addEventListener('click', (e) => {
+        const retryBtn = e.target.closest('.retry-biz-btn');
+        if (retryBtn) {
+            e.stopPropagation();
+            const id = retryBtn.dataset.id;
+            const name = retryBtn.dataset.name;
+            const contact = retryBtn.dataset.contact;
+            const phone = retryBtn.dataset.phone;
+            const gst = retryBtn.dataset.gst;
+            const address = retryBtn.dataset.address;
+            const reason = retryBtn.dataset.reason;
+
+            const form = document.getElementById('form-register-business');
+            form.dataset.editId = id;
+            document.getElementById('regBizName').value = name;
+            document.getElementById('regBizContactName').value = contact;
+            document.getElementById('regBizContactPhone').value = phone;
+            document.getElementById('regBizGst').value = gst;
+            document.getElementById('regBizAddress').value = address;
+            
+            const notice = document.getElementById('reg-rejection-notice');
+            document.getElementById('reg-rejection-reason').textContent = reason || 'No specific reason provided.';
+            notice.classList.remove('hidden');
+
+            navigateToView('view-register-business');
+        }
+    });
+
+    // 2. Submit Registration Form
+    const registerForm = document.getElementById('form-register-business');
+    if (registerForm) {
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('gt_token');
+            if (!token) return;
+
+            const payload = {
+                name: document.getElementById('regBizName').value.trim(),
+                contact_name: document.getElementById('regBizContactName').value.trim(),
+                contact_phone: document.getElementById('regBizContactPhone').value.trim(),
+                gst_vat: document.getElementById('regBizGst').value.trim(),
+                registered_address: document.getElementById('regBizAddress').value.trim()
+            };
+
+            if (registerForm.dataset.editId) {
+                payload.bizId = registerForm.dataset.editId;
+            }
+
+            const btn = document.getElementById('btn-submit-register');
+            const text = btn.querySelector('.btn-text');
+            const loader = btn.querySelector('.btn-loader');
+            text.classList.add('hidden');
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+
+            fetch('/businesses/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                text.classList.remove('hidden');
+                loader.classList.add('hidden');
+                btn.disabled = false;
+
+                if (data.success) {
+                    showToast(registerForm.dataset.editId ? 'Application Resubmitted!' : 'Application Sent for Review!');
+                    navigateToView('view-business-management');
+                    fetchBusinesses();
+                } else {
+                    showToast('Error: ' + (data.message || 'Could not register business.'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                text.classList.remove('hidden');
+                loader.classList.add('hidden');
+                btn.disabled = false;
+                showToast('Server error. Please try again later.');
+            });
+        });
+    }
+
+    // 3. Admin Approvals Flow
+    window.fetchApprovals = function() {
+        const token = localStorage.getItem('gt_token');
+        if (!token) return;
+
+        fetch('/admin/approvals', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                renderApprovalsList(data.approvals);
+            }
+        })
+        .catch(err => console.error('Error fetching approvals:', err));
+    };
+
+    function renderApprovalsList(approvals) {
+        const listGrid = document.getElementById('approvals-list-grid');
+        const emptyState = document.getElementById('approvals-empty-state');
+        
+        if (!listGrid) return;
+        listGrid.innerHTML = '';
+
+        if (approvals.length === 0) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            listGrid.classList.add('hidden');
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+        listGrid.classList.remove('hidden');
+
+        approvals.forEach(appr => {
+            const card = document.createElement('div');
+            card.className = 'business-card';
+            card.innerHTML = `
+                <div class="biz-card-header">
+                    <div class="biz-icon-wrapper"><i class="ph-fill ph-clipboard-text"></i></div>
+                    <div class="biz-badge badge-warning">Pending Review</div>
+                </div>
+                <div class="biz-card-body" style="gap: 0.5rem;">
+                    <div class="biz-name" style="margin-bottom: 0.5rem;">${appr.name}</div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-user"></i> Contact: ${appr.contact_name}
+                    </div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-phone"></i> Phone: ${appr.contact_phone}
+                    </div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-identification-card"></i> GST/VAT: ${appr.gst_vat}
+                    </div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-map-pin"></i> Address: ${appr.registered_address}
+                    </div>
+                    <div class="meta-item" style="margin-top: 0.5rem;">
+                        <i class="ph ph-calendar"></i>
+                        <span>Submitted ${new Date(appr.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                <div class="biz-card-footer">
+                    <div class="biz-actions" style="justify-content: flex-end; gap: 0.5rem;">
+                        <button class="submit-btn" style="background: var(--danger); border-color: var(--danger); padding: 0.5rem 1rem; border-radius: 8px;" onclick="promptReject(${appr.id})">
+                            <span class="btn-text">Reject</span>
+                        </button>
+                        <button class="submit-btn primary-action-btn" style="padding: 0.5rem 1rem; border-radius: 8px;" onclick="approveBusiness(${appr.id})">
+                            <span class="btn-text">Approve</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            listGrid.appendChild(card);
+        });
+    }
+
+    let currentApproveId = null;
+    window.approveBusiness = function(id) {
+        currentApproveId = id;
+        const commentInput = document.getElementById('approve-comment-input');
+        if (commentInput) commentInput.value = '';
+        const modal = document.getElementById('approve-modal');
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    const btnCancelApprove = document.getElementById('btn-cancel-approve');
+    if (btnCancelApprove) {
+        btnCancelApprove.addEventListener('click', () => {
+            document.getElementById('approve-modal').classList.add('hidden');
+            currentApproveId = null;
+        });
+    }
+
+    const btnConfirmApprove = document.getElementById('btn-confirm-approve');
+    if (btnConfirmApprove) {
+        btnConfirmApprove.addEventListener('click', () => {
+            if (!currentApproveId) return;
+            const comment = document.getElementById('approve-comment-input').value.trim();
+            const token = localStorage.getItem('gt_token');
+            
+            const btn = document.getElementById('btn-confirm-approve');
+            const originalText = btn.querySelector('.btn-text').textContent;
+            btn.querySelector('.btn-text').textContent = 'Approving...';
+            btn.disabled = true;
+
+            fetch('/admin/approvals/' + currentApproveId + '/approve', {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ comment })
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('approve-modal').classList.add('hidden');
+                if (data.success) {
+                    showToast('Business Approved!');
+                    fetchApprovals();
+                } else {
+                    showToast('Error approving business.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Server error.');
+            })
+            .finally(() => {
+                btn.querySelector('.btn-text').textContent = originalText;
+                btn.disabled = false;
+                currentApproveId = null;
+            });
+        });
+    }
+
+    let currentRejectId = null;
+    window.promptReject = function(id) {
+        currentRejectId = id;
+        document.getElementById('reject-reason-input').value = '';
+        document.getElementById('reject-modal').classList.remove('hidden');
+    };
+
+    const btnCancelReject = document.getElementById('btn-cancel-reject');
+    if (btnCancelReject) {
+        btnCancelReject.addEventListener('click', () => {
+            document.getElementById('reject-modal').classList.add('hidden');
+            currentRejectId = null;
+        });
+    }
+
+    const btnConfirmReject = document.getElementById('btn-confirm-reject');
+    if (btnConfirmReject) {
+        btnConfirmReject.addEventListener('click', () => {
+            if (!currentRejectId) return;
+            const reason = document.getElementById('reject-reason-input').value.trim();
+            if (!reason) {
+                showToast('Please provide a reason for rejection.');
+                return;
+            }
+
+            const token = localStorage.getItem('gt_token');
+            fetch('/admin/approvals/' + currentRejectId + '/reject', {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ reason })
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('reject-modal').classList.add('hidden');
+                if (data.success) {
+                    showToast('Business Rejected.');
+                    fetchApprovals();
+                } else {
+                    showToast('Error rejecting business.');
+                }
+            });
+        });
+    }
 });

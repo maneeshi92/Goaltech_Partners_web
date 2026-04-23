@@ -29,7 +29,12 @@ async function migrate() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
                 name VARCHAR(255) NOT NULL,
-                status ENUM('active', 'inactive') DEFAULT 'active',
+                contact_name VARCHAR(100),
+                contact_phone VARCHAR(20),
+                gst_vat VARCHAR(100),
+                registered_address TEXT,
+                reject_reason TEXT,
+                status ENUM('active', 'inactive', 'pending', 'rejected') DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
