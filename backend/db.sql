@@ -27,10 +27,13 @@ CREATE TABLE IF NOT EXISTS businesses (
 CREATE TABLE IF NOT EXISTS facilities (
     id INT AUTO_INCREMENT PRIMARY KEY,
     business_id INT NOT NULL,
+    venue VARCHAR(255),
+    venue_location VARCHAR(255),
     type VARCHAR(100) NOT NULL,
     label VARCHAR(255),
     icon VARCHAR(100),
     mode VARCHAR(50),
+    status ENUM('active', 'inactive') DEFAULT 'active',
     hours JSON,
     amenities JSON,
     price DECIMAL(10, 2),

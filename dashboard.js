@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════════════════
     const viewAddBusiness   = document.getElementById('view-add-business');
     const cancelAddBusiness = document.getElementById('cancel-add-business');
-    const launchBtn         = document.getElementById('launch-business-btn');
+    const launchBtn         = document.getElementById('save-business-btn');
     const businessNameInput = document.getElementById('businessName');
 
     // Type selector (in sub-step A)
@@ -374,6 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let savedBusinessTypes = [];          // array of saved type objects
     let businessName = '';
     let editingBusinessId = null;
+    let savedBusinessVenues = [];         // { name, location }
+    let currentActiveVenue = null;
 
     // ── Route: empty-state & top-bar "Add New Business" → wizard ──
     const openAddWizard = () => {
@@ -418,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initWizardState() {
         businessName       = '';
         savedBusinessTypes = [];
+        savedBusinessVenues = [];
         currentTypeDraft   = { type: null, label: null, icon: null, needsMode: false, mode: null };
 
         if (businessNameInput) businessNameInput.value = '';
@@ -600,12 +603,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="add-icon"><i class="ph ph-plus"></i></div>
             <span>Register Business</span>
         `;
-        addCard.addEventListener('click', () => {
+        addCard.onclick = () => {
             document.getElementById('form-register-business').reset();
             delete document.getElementById('form-register-business').dataset.editId;
             document.getElementById('reg-rejection-notice').classList.add('hidden');
             navigateToView('view-register-business');
-        });
+        };
         listGrid.appendChild(addCard);
 
         // Add Listeners
@@ -701,7 +704,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Load Facilities
-                savedBusinessTypes = biz.facilities;
+                savedBusinessTypes = biz.facilities || [];
+                
+                // Populate savedBusinessVenues from existing facilities
+                const uniqueVenues = {};
+                savedBusinessTypes.forEach(f => {
+                    if (f.venue) {
+                        uniqueVenues[f.venue] = f.venue_location || 'Not specified';
+                    }
+                });
+                savedBusinessVenues = Object.entries(uniqueVenues).map(([name, location]) => ({ name, location }));
                 
                 // Show 'General' tab by default
                 performWizardNav('general');
@@ -730,6 +742,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Ensure we have a business name
+            businessName = document.getElementById('businessName')?.value?.trim() || businessName;
+            if (!businessName || businessName.length < 3) {
+                showToast('Please enter a valid business name (min 3 chars).');
+                // Switch to general tab if name is missing
+                performWizardNav('general');
+                return;
+            }
+
+            const bizStatusToggle = document.getElementById('business-status-toggle');
             const payload = {
                 name: businessName,
                 status: bizStatusToggle && bizStatusToggle.checked ? 'active' : 'inactive',
@@ -738,8 +760,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             launchBtn.disabled = true;
             const btnText = launchBtn.querySelector('.btn-text');
-            const originalText = btnText.textContent;
-            btnText.textContent = editingBusinessId ? 'Updating Business...' : 'Saving Business...';
+            const originalText = btnText ? btnText.textContent : 'Save Business';
+            if (btnText) btnText.textContent = editingBusinessId ? 'Updating...' : 'Saving...';
 
             const url = editingBusinessId ? `/businesses/${editingBusinessId}` : '/businesses';
             const method = editingBusinessId ? 'PUT' : 'POST';
@@ -755,13 +777,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    showToast('Business setup saved successfully!');
+                    showToast(editingBusinessId ? 'Business updated successfully!' : 'Business saved successfully!');
                     
                     // Reset local state
                     businessName = '';
                     if (businessNameInput) businessNameInput.value = '';
                     savedBusinessTypes = [];
                     if (savedTypesList) savedTypesList.innerHTML = '';
+                    savedBusinessVenues = [];
                     resetSubstepA();
                     
                     // Refresh the list
@@ -773,15 +796,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 1000);
                 } else {
                     showToast('Error: ' + data.message);
+                    launchBtn.disabled = false;
+                    if (btnText) btnText.textContent = originalText;
                 }
             })
             .catch(err => {
                 console.error('Error saving business:', err);
                 showToast('Server error while saving.');
-            })
-            .finally(() => {
                 launchBtn.disabled = false;
-                btnText.textContent = originalText;
+                if (btnText) btnText.textContent = originalText;
             });
         });
     }
@@ -1040,11 +1063,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const subList = document.getElementById('sidebar-sub-services');
         if (subList) {
             subList.innerHTML = '';
-            savedBusinessTypes.forEach((type, index) => {
+            
+            // Show unique venues in the sidebar
+            savedBusinessVenues.forEach((venue, vIndex) => {
                 const item = document.createElement('div');
-                item.className = `sidebar-sub-item ${activeWizardTab === index ? 'active' : ''}`;
-                item.innerHTML = `<i class="ph ${type.icon || 'ph-dot'}"></i><span>${type.label}</span>`;
-                item.onclick = () => attemptWizardNav(index);
+                // The venue is "active" if we are in services-list view or editing a service belonging to this venue
+                const isActive = (activeWizardTab === 'services-list') || 
+                                 (typeof activeWizardTab === 'number' && savedBusinessTypes[activeWizardTab]?.venue === venue.name);
+                
+                item.className = `sidebar-sub-item ${isActive ? 'active' : ''}`;
+                item.innerHTML = `<i class="ph ph-map-pin"></i><span>${venue.name}</span>`;
+                item.onclick = () => {
+                    performWizardNav('services-list');
+                    // Open the venue details modal to see its services
+                    openVenueDetails(venue);
+                };
                 subList.appendChild(item);
             });
         }
@@ -1063,43 +1096,203 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!grid) return;
         grid.innerHTML = '';
 
-        savedBusinessTypes.forEach((type, index) => {
+        // Group services by venue
+        const venueGroups = {};
+        
+        // 1. Add venues that have services
+        savedBusinessTypes.forEach(type => {
+            const vName = type.venue || 'General';
+            if (!venueGroups[vName]) {
+                venueGroups[vName] = {
+                    name: vName,
+                    location: type.venue_location || 'Not specified',
+                    services: []
+                };
+            }
+            venueGroups[vName].services.push(type);
+        });
+
+        // 2. Add venues that don't have services yet
+        savedBusinessVenues.forEach(v => {
+            if (!venueGroups[v.name]) {
+                venueGroups[v.name] = {
+                    name: v.name,
+                    location: v.location,
+                    services: []
+                };
+            }
+        });
+
+        const groups = Object.values(venueGroups);
+
+        groups.forEach((venue, vIndex) => {
             const card = document.createElement('div');
-            card.className = 'business-card service-card';
-            const openDays = Object.values(type.hours || {}).filter(h => h.open).length;
+            card.className = 'business-card service-card venue-card';
+            card.style.cursor = 'pointer';
 
             card.innerHTML = `
-                <div class="biz-card-header">
-                    <div class="biz-icon-wrapper"><i class="ph-fill ${type.icon || 'ph-buildings'}"></i></div>
-                    <div class="biz-badge ${type.status === 'inactive' ? 'badge-inactive' : ''}">${type.status === 'active' ? 'Active' : 'Inactive'}</div>
-                </div>
-                <div class="biz-card-body">
-                    <div class="biz-name">${type.label}</div>
-                    <div class="biz-meta-info">
-                        <div class="meta-item"><i class="ph ph-calendar-check"></i><span>${openDays} Open Days</span></div>
-                        <div class="meta-item"><i class="ph ph-tag"></i><span>₹${type.price || 0}/hr base</span></div>
+                <button type="button" class="biz-btn delete-venue-btn" style="position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; color: #ef4444; width: auto; min-width: 0; padding: 0.25rem; z-index: 5; transition: all 0.2s; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));" title="Delete Venue">
+                    <i class="ph ph-trash" style="font-size: 1.3rem;"></i>
+                </button>
+                <div class="biz-card-header" style="padding: 1.25rem 1.25rem 0.75rem 1.25rem; display: flex; align-items: flex-start; gap: 1rem; border-bottom: none;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.65rem; min-width: 60px;">
+                        <div class="biz-icon-wrapper" style="margin: 0; width: 44px; height: 44px; font-size: 1.35rem; background: linear-gradient(135deg, var(--primary), #818cf8); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                            <i class="ph-fill ph-buildings"></i>
+                        </div>
+                        <div class="biz-badge" style="margin: 0; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.6rem; padding: 0.2rem 0.4rem; white-space: nowrap;">
+                            ${venue.services.length} SERVICES
+                        </div>
+                    </div>
+                    <div style="padding-top: 0.15rem; flex: 1; min-width: 0;">
+                        <div class="biz-name" style="margin: 0; font-size: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${venue.name}</div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">
+                            <i class="ph ph-map-pin" style="color: var(--primary);"></i>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${venue.location}</span>
+                        </div>
                     </div>
                 </div>
-                <div class="biz-card-footer">
+                <div class="biz-card-body" style="padding: 0.75rem 1.25rem; flex: 1;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.03); min-height: 48px;">
+                        ${venue.services.length === 0 ? 
+                            `<span style="font-size: 0.75rem; color: var(--text-muted);">No services added</span>` : 
+                            venue.services.slice(0, 6).map(s => `
+                                <div title="${s.label}" style="width: 32px; height: 32px; background: rgba(255,255,255,0.04); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--primary); border: 1px solid rgba(255,255,255,0.05);">
+                                    <i class="ph-fill ${s.icon || 'ph-buildings'}" style="font-size: 1rem;"></i>
+                                </div>
+                            `).join('')
+                        }
+                        ${venue.services.length > 6 ? `<div style="font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; padding-left: 2px;">+${venue.services.length - 6} more</div>` : ''}
+                    </div>
+                </div>
+                <div class="biz-card-footer" style="padding: 0.75rem 1.25rem 1.25rem 1.25rem; border-top: none;">
                     <div class="biz-actions">
-                        <button type="button" class="biz-btn biz-btn-manage edit-service-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
+                        <button type="button" class="biz-btn biz-btn-manage view-venue-btn" style="width: 100%; height: 42px; font-size: 0.9rem;">
+                            <i class="ph ph-list-bullets"></i> View Services
+                        </button>
                     </div>
                 </div>
             `;
-            card.querySelector('.edit-service-btn').onclick = () => performWizardNav(index);
+            
+            // Add click listener to the whole card for viewing
+            card.onclick = (e) => {
+                if (e.target.closest('.delete-venue-btn')) return;
+                openVenueDetails(venue);
+            };
+
+            // Add click listener specifically for delete
+            const delBtn = card.querySelector('.delete-venue-btn');
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                handleDeleteVenue(venue);
+            };
+
             grid.appendChild(card);
         });
 
-        // Add Service Ghost Card
+        // Add Venue Ghost Card
         const addCard = document.createElement('div');
-        addCard.className = 'business-card add-biz-card add-service-ghost-card';
+        addCard.className = 'business-card add-biz-card';
         addCard.innerHTML = `
             <div class="add-icon"><i class="ph ph-plus"></i></div>
-            <span>Add Service</span>
+            <span>Add Venue</span>
         `;
-        addCard.onclick = () => performWizardNav('new');
+        addCard.onclick = () => {
+            const modal = document.getElementById('add-venue-modal');
+            if (modal) {
+                document.getElementById('new-venue-name').value = '';
+                document.getElementById('new-venue-location').value = '';
+                modal.classList.remove('hidden');
+            }
+        };
         grid.appendChild(addCard);
+
+        // Keep sidebar in sync
+        renderWizardSidebar();
     }
+
+    function openVenueDetails(venue) {
+        currentActiveVenue = venue;
+        const modal = document.getElementById('venue-details-modal');
+        if (!modal) return;
+
+        document.getElementById('vdm-name').textContent = venue.name;
+        document.getElementById('vdm-location').textContent = venue.location;
+        
+        const grid = document.getElementById('vdm-services-grid');
+        grid.innerHTML = '';
+
+        if (venue.services.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; padding: 2rem; text-align: center; color: var(--text-muted);">
+                    <i class="ph ph-info" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+                    No services added to this venue yet.
+                </div>
+            `;
+        } else {
+            venue.services.forEach((type, sIndex) => {
+                const card = document.createElement('div');
+                card.className = 'business-card service-card';
+                card.style.background = 'rgba(255,255,255,0.03)';
+                card.innerHTML = `
+                    <button type="button" class="biz-btn delete-service-btn" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; color: #ef4444; width: auto; min-width: 0; padding: 0.25rem; z-index: 5; transition: all 0.2s; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));" title="Delete Service">
+                        <i class="ph ph-trash" style="font-size: 1rem;"></i>
+                    </button>
+                    <div class="biz-card-header" style="padding: 0.75rem;">
+                        <div class="biz-icon-wrapper" style="width: 30px; height: 30px;"><i class="ph-fill ${type.icon || 'ph-buildings'}" style="font-size: 1rem;"></i></div>
+                        <div class="biz-badge" style="font-size: 0.7rem;">${type.status}</div>
+                    </div>
+                    <div class="biz-card-body" style="padding: 0.75rem;">
+                        <div class="biz-name" style="font-size: 0.95rem;">${type.label}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">₹${type.price || 0}/hr</div>
+                    </div>
+                `;
+                
+                const delBtn = card.querySelector('.delete-service-btn');
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    handleDeleteService(type);
+                };
+
+                grid.appendChild(card);
+            });
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    // Modal Close Listeners
+    document.getElementById('close-add-venue-modal')?.addEventListener('click', () => document.getElementById('add-venue-modal').classList.add('hidden'));
+    document.getElementById('cancel-add-venue')?.addEventListener('click', () => document.getElementById('add-venue-modal').classList.add('hidden'));
+    document.getElementById('close-vdm-modal')?.addEventListener('click', () => document.getElementById('venue-details-modal').classList.add('hidden'));
+    document.getElementById('vdm-close-btn')?.addEventListener('click', () => document.getElementById('venue-details-modal').classList.add('hidden'));
+
+    // Confirm Add Venue
+    document.getElementById('confirm-add-venue')?.addEventListener('click', () => {
+        const name = document.getElementById('new-venue-name').value.trim();
+        const location = document.getElementById('new-venue-location').value.trim();
+        
+        if (!name || !location) {
+            showToast('Please enter both name and location.');
+            return;
+        }
+
+        savedBusinessVenues.push({ name, location });
+        document.getElementById('add-venue-modal').classList.add('hidden');
+        renderServicesGrid();
+        renderWizardSidebar();
+        showToast(`Venue "${name}" added!`);
+    });
+
+    // Add Service to Venue
+    document.getElementById('vdm-add-service-btn')?.addEventListener('click', () => {
+        document.getElementById('venue-details-modal').classList.add('hidden');
+        performWizardNav('new');
+        // Pre-fill venue info for the new service
+        if (currentActiveVenue) {
+            currentTypeDraft.venue = currentActiveVenue.name;
+            currentTypeDraft.venue_location = currentActiveVenue.location;
+        }
+    });
 
     // Sidebar Menu Listeners
     document.querySelectorAll('.wizard-sidebar .step-item').forEach(item => {
@@ -1120,68 +1313,6 @@ document.addEventListener('DOMContentLoaded', () => {
         attemptWizardNav('services-list');
     });
 
-    // Save Business button (on services listing page)
-    const saveBizBtn = document.getElementById('save-business-btn');
-    saveBizBtn?.addEventListener('click', () => {
-        const token = localStorage.getItem('gt_token');
-        if (!token) { showToast('Session expired. Please login again.'); return; }
-
-        businessName = document.getElementById('businessName')?.value?.trim() || businessName;
-        if (!businessName || businessName.length < 3) {
-            showToast('Please enter a valid business name first (General Info tab).');
-            return;
-        }
-
-        const bizStatusToggle = document.getElementById('business-status-toggle');
-        const payload = {
-            name: businessName,
-            status: bizStatusToggle?.checked ? 'active' : 'inactive',
-            facilities: savedBusinessTypes
-        };
-
-        const saveBtnText = saveBizBtn.querySelector('.btn-text');
-        if (saveBtnText) saveBtnText.textContent = 'Saving...';
-        saveBizBtn.disabled = true;
-
-        const url = editingBusinessId ? `/businesses/${editingBusinessId}` : '/businesses';
-        const method = editingBusinessId ? 'PUT' : 'POST';
-
-        fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(payload)
-        })
-        .then(r => r.json())
-        .then(data => {
-            saveBizBtn.disabled = false;
-            const finalLabel = editingBusinessId ? 'Update Business' : 'Save Business';
-            if (saveBtnText) saveBtnText.textContent = finalLabel;
-            
-            if (data.success) {
-                showToast(editingBusinessId ? 'Business updated!' : 'Business added!');
-                
-                // Reset wizard state
-                businessName = '';
-                const businessNameInput = document.getElementById('businessName');
-                if (businessNameInput) businessNameInput.value = '';
-                savedBusinessTypes = [];
-                resetSubstepA();
-
-                // Navigate back to the business listing page
-                navigateToView('view-business-management', true);
-                fetchBusinesses();
-            } else {
-                showToast('Error: ' + (data.message || 'Could not save business.'));
-            }
-        })
-        .catch(err => {
-            saveBizBtn.disabled = false;
-            const finalLabel = editingBusinessId ? 'Update Business' : 'Save Business';
-            if (saveBtnText) saveBtnText.textContent = finalLabel;
-            console.error(err);
-            showToast('Connection error. Please try again.');
-        });
-    });
 
     const unsavedModal = document.getElementById('unsaved-changes-modal');
     const ignoreBtn   = document.getElementById('unsaved-ignore-btn');
@@ -1217,16 +1348,139 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Add New Service handlers
-    const miniAddBtn = document.getElementById('sidebar-add-service-mini');
-    miniAddBtn?.addEventListener('click', () => {
-        attemptWizardNav('new');
+    // Add New Venue handlers (from sidebar)
+    const miniAddVenueBtn = document.getElementById('sidebar-add-venue-mini');
+    miniAddVenueBtn?.addEventListener('click', () => {
+        const modal = document.getElementById('add-venue-modal');
+        if (modal) {
+            document.getElementById('new-venue-name').value = '';
+            document.getElementById('new-venue-location').value = '';
+            modal.classList.remove('hidden');
+        }
     });
 
     // Override the old renderSavedTypesList to use sidebar
     function renderSavedTypesList() {
         renderWizardSidebar();
         updateLaunchBtn();
+    }
+
+    // ══════════════════════════════════════════════════
+    //  DELETE FUNCTIONALITY
+    // ══════════════════════════════════════════════════
+    function showDeleteConfirmation(config) {
+        const modal = document.getElementById('delete-confirm-modal');
+        if (!modal) return;
+
+        document.getElementById('dcm-title').textContent = config.title || 'Confirm Delete';
+        document.getElementById('dcm-message').textContent = config.message || 'Are you sure?';
+        
+        const summary = document.getElementById('dcm-summary');
+        const summaryList = document.getElementById('dcm-summary-list');
+        
+        if (config.summary && config.summary.length > 0) {
+            summary.style.display = 'block';
+            summaryList.innerHTML = config.summary.map(s => `<li>${s}</li>`).join('');
+        } else {
+            summary.style.display = 'none';
+        }
+
+        const confirmBtn = document.getElementById('dcm-confirm-btn');
+        const cancelBtn = document.getElementById('dcm-cancel-btn');
+
+        // Clear previous listeners
+        const newConfirm = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+        
+        newConfirm.onclick = () => {
+            modal.classList.add('hidden');
+            if (config.onConfirm) config.onConfirm();
+        };
+
+        cancelBtn.onclick = () => {
+            modal.classList.add('hidden');
+            if (config.onCancel) config.onCancel();
+        };
+
+        modal.classList.remove('hidden');
+    }
+
+    async function handleDeleteVenue(venue) {
+        const services = savedBusinessTypes.filter(f => f.venue === venue.name);
+        
+        showDeleteConfirmation({
+            title: 'Delete Venue',
+            message: `Are you sure you want to delete "${venue.name}"?`,
+            summary: services.map(s => s.label || s.type),
+            onConfirm: async () => {
+                if (editingBusinessId) {
+                    const token = localStorage.getItem('gt_token');
+                    try {
+                        const res = await fetch(`/businesses/${editingBusinessId}/venues/${encodeURIComponent(venue.name)}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (!data.success) {
+                            showToast('Server error: ' + data.message);
+                            return;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('Failed to delete from server.');
+                        return;
+                    }
+                }
+
+                // Update Local State
+                savedBusinessTypes = savedBusinessTypes.filter(f => f.venue !== venue.name);
+                savedBusinessVenues = savedBusinessVenues.filter(v => v.name !== venue.name);
+                
+                renderServicesGrid();
+                renderWizardSidebar();
+                showToast(`Venue "${venue.name}" and its services removed.`);
+            }
+        });
+    }
+
+    async function handleDeleteService(service) {
+        showDeleteConfirmation({
+            title: 'Delete Service',
+            message: `Are you sure you want to remove "${service.label || service.type}"?`,
+            onConfirm: async () => {
+                if (editingBusinessId && service.fac_id) {
+                    const token = localStorage.getItem('gt_token');
+                    try {
+                        const res = await fetch(`/businesses/${editingBusinessId}/facilities/${service.fac_id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (!data.success) {
+                            showToast('Server error: ' + data.message);
+                            return;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('Failed to delete from server.');
+                        return;
+                    }
+                }
+
+                // Update Local State
+                savedBusinessTypes = savedBusinessTypes.filter(f => f !== service);
+                
+                // Refresh views
+                if (currentActiveVenue) {
+                    // Update the active venue services list in memory
+                    currentActiveVenue.services = currentActiveVenue.services.filter(f => f !== service);
+                    openVenueDetails(currentActiveVenue);
+                }
+                renderServicesGrid();
+                renderWizardSidebar();
+                showToast('Service removed.');
+            }
+        });
     }
 
     function loadTypeIntoBuilder(type) {

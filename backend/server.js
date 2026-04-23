@@ -40,19 +40,21 @@ if (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')) {
     };
 }
 
-const db = mysql.createConnection(dbConfig);
+const db = mysql.createPool(dbConfig);
+const promisePool = db.promise();
 
 let isDbConnected = false;
 
-db.connect((err) => {
-    if (err) {
-        console.error('CRITICAL: MySQL Connection Failed:', err.message);
+// Verify pool connection
+promisePool.query('SELECT 1')
+    .then(() => {
+        console.log('Successfully connected to MySQL Database Pool');
+        isDbConnected = true;
+    })
+    .catch(err => {
+        console.error('CRITICAL: MySQL Pool Connection Failed:', err.message);
         isDbConnected = false;
-        return;
-    }
-    console.log('Successfully connected to MySQL Database');
-    isDbConnected = true;
-});
+    });
 
 // Middleware to check DB connection
 const checkDbConnection = (req, res, next) => {
@@ -299,11 +301,13 @@ app.post('/businesses', authenticateToken, checkDbConnection, async (req, res) =
                 f.capacity,
                 f.description,
                 f.phone,
-                f.website
+                f.website,
+                f.venue,
+                f.venue_location
             ]);
 
             const facilityQuery = `INSERT INTO facilities 
-                (business_id, type, label, icon, mode, status, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
+                (business_id, type, label, icon, mode, status, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website, venue, venue_location) 
                 VALUES ?`;
             
             await connection.query(facilityQuery, [facilityData]);
@@ -329,7 +333,7 @@ app.get('/businesses/:id', authenticateToken, checkDbConnection, (req, res) => {
         SELECT b.id as biz_id, b.name as biz_name, b.user_id,
                f.id as fac_id, f.type, f.label, f.icon, f.mode, f.hours, f.amenities, 
                f.price, f.weekendPrice, f.peakPrice, f.peakStart, f.peakEnd, 
-               f.capacity, f.description, f.phone, f.website
+               f.capacity, f.description, f.phone, f.website, f.venue, f.venue_location, f.status
         FROM businesses b
         LEFT JOIN facilities f ON b.id = f.business_id
         WHERE b.id = ? AND b.user_id = ?
@@ -364,7 +368,10 @@ app.get('/businesses/:id', authenticateToken, checkDbConnection, (req, res) => {
                 capacity: r.capacity,
                 description: r.description,
                 phone: r.phone,
-                website: r.website
+                website: r.website,
+                venue: r.venue,
+                                venue_location: r.venue_location,
+                status: r.status
             }))
         };
 
@@ -388,7 +395,7 @@ app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res
         await connection.beginTransaction();
 
         // 1. Update business
-        await connection.query('UPDATE businesses SET name = ?, status = ? WHERE id = ? AND user_id = ?', [name, status || 'active', bizId, userId]);
+        await connection.query('UPDATE businesses SET `name` = ?, `status` = ? WHERE `id` = ? AND `user_id` = ?', [name, status || 'active', bizId, userId]);
 
         // 2. Delete old facilities
         await connection.query('DELETE FROM facilities WHERE business_id = ?', [bizId]);
@@ -412,13 +419,16 @@ app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res
                 f.capacity,
                 f.description,
                 f.phone,
-                f.website
+                f.website,
+                f.venue,
+                f.venue_location
             ]);
 
             const facilityQuery = `INSERT INTO facilities 
-                (business_id, type, label, icon, mode, status, hours, amenities, price, weekendPrice, peakPrice, peakStart, peakEnd, capacity, description, phone, website) 
+                (\`business_id\`, \`type\`, \`label\`, \`icon\`, \`mode\`, \`status\`, \`hours\`, \`amenities\`, \`price\`, \`weekendPrice\`, \`peakPrice\`, \`peakStart\`, \`peakEnd\`, \`capacity\`, \`description\`, \`phone\`, \`website\`, \`venue\`, \`venue_location\`) 
                 VALUES ?`;
             
+            console.log(`Inserting ${facilities.length} facilities for business ${bizId}`);
             await connection.query(facilityQuery, [facilityData]);
         }
 
@@ -507,6 +517,52 @@ app.put('/admin/approvals/:id/reject', authenticateToken, checkDbConnection, asy
     } catch (err) {
         console.error('Error rejecting business:', err);
         res.status(500).json({ success: false, message: 'Server error rejecting business' });
+    }
+});
+
+// Delete a specific facility
+app.delete('/businesses/:bizId/facilities/:facId', checkDbConnection, async (req, res) => {
+    const { bizId, facId } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ success: false, message: 'No token provided' });
+
+    try {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.userId;
+
+        // Verify ownership
+        const [biz] = await promisePool.query('SELECT id FROM businesses WHERE id = ? AND user_id = ?', [bizId, userId]);
+        if (biz.length === 0) return res.status(403).json({ success: false, message: 'Unauthorized' });
+
+        await promisePool.query('DELETE FROM facilities WHERE id = ? AND business_id = ?', [facId, bizId]);
+        res.json({ success: true, message: 'Facility deleted' });
+    } catch (err) {
+        console.error('Error deleting facility:', err);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Delete all facilities in a venue
+app.delete('/businesses/:bizId/venues/:venueName', checkDbConnection, async (req, res) => {
+    const { bizId, venueName } = req.params;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ success: false, message: 'No token provided' });
+
+    try {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.userId;
+
+        // Verify ownership
+        const [biz] = await promisePool.query('SELECT id FROM businesses WHERE id = ? AND user_id = ?', [bizId, userId]);
+        if (biz.length === 0) return res.status(403).json({ success: false, message: 'Unauthorized' });
+
+        await promisePool.query('DELETE FROM facilities WHERE business_id = ? AND venue = ?', [bizId, venueName]);
+        res.json({ success: true, message: 'Venue and its services deleted' });
+    } catch (err) {
+        console.error('Error deleting venue:', err);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 

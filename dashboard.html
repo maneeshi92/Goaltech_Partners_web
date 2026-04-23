@@ -410,7 +410,7 @@
                     <h1 class="page-title">Add New Business</h1>
                     <p class="page-subtitle">Let's get your new facility configured.</p>
                 </div>
-                <button class="icon-btn" id="cancel-add-business" title="Cancel">
+                <button class="icon-btn" id="cancel-add-business" title="Cancel" style="display: none;">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
@@ -438,9 +438,9 @@
                             <div id="sidebar-sub-services" class="sidebar-sub-list">
                                 <!-- Populated items via JS -->
                             </div>
-                            <div class="sidebar-sub-item sidebar-add-trigger" id="sidebar-add-service-mini">
+                            <div class="sidebar-sub-item sidebar-add-trigger" id="sidebar-add-venue-mini">
                                 <i class="ph ph-plus-circle"></i>
-                                <span>Add New Service</span>
+                                <span>Add New Venue</span>
                             </div>
                         </div>
                     </div>
@@ -490,8 +490,8 @@
                             <!-- SECTION 2: Services List View -->
                             <div id="wizard-section-services-list" class="setup-section hidden-section">
                                 <div class="section-header">
-                                    <h2 class="section-title">Business Services</h2>
-                                    <p class="section-subtitle">Manage the services provided by this business</p>
+                                    <h2 class="section-title">Business Venues</h2>
+                                    <p class="section-subtitle">Manage locations and their associated services</p>
                                 </div>
                                 <div id="services-grid-view" class="businesses-list-grid saved-services-grid">
                                     <!-- Cards for each service + "Add Service" ghost card -->
@@ -1010,8 +1010,104 @@
         </div>
     </div>
 
+    <!-- Add Venue Modal -->
+    <div class="modal-overlay hidden dialog-overlay" id="add-venue-modal">
+        <div class="modal-content widget-glass" style="max-width: 500px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="venue-icon" style="width: 40px; height: 40px; background: rgba(99, 102, 241, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                        <i class="ph ph-map-pin-plus" style="font-size: 1.25rem;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.25rem;">Add New Venue</h2>
+                        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Define a location for your services</p>
+                    </div>
+                </div>
+                <button class="icon-btn" id="close-add-venue-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Venue Name</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-buildings icon"></i>
+                        <input type="text" id="new-venue-name" placeholder="e.g. Main Branch, North Arena">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Location / Address</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-map-pin icon"></i>
+                        <input type="text" id="new-venue-location" placeholder="e.g. 123 Street, City Center">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <button type="button" class="btn-secondary" id="cancel-add-venue">Cancel</button>
+                <button type="button" class="btn-primary" id="confirm-add-venue">Add Venue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Venue Drill-down Modal (to see services in a venue) -->
+    <div class="modal-overlay hidden dialog-overlay" id="venue-details-modal">
+        <div class="modal-content widget-glass" style="max-width: 700px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="venue-icon" style="width: 40px; height: 40px; background: rgba(99, 102, 241, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                        <i class="ph ph-map-pin" style="font-size: 1.25rem;"></i>
+                    </div>
+                    <div>
+                        <h2 id="vdm-name" style="margin: 0; font-size: 1.25rem;">Venue Name</h2>
+                        <p id="vdm-location" style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Location</p>
+                    </div>
+                </div>
+                <button class="icon-btn" id="close-vdm-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="vdm-services-grid" class="businesses-list-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+                    <!-- Services for this venue -->
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <button type="button" class="btn-secondary" id="vdm-close-btn">Close</button>
+                <button type="button" class="btn-primary" id="vdm-add-service-btn">
+                    <i class="ph ph-plus"></i> Add Service
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="mobile-overlay" id="mobile-overlay"></div>
 
     <script src="dashboard.js"></script>
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay hidden dialog-overlay" id="delete-confirm-modal" style="z-index: 10001;">
+        <div class="modal-content widget-glass" style="max-width: 450px; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="delete-icon" style="width: 40px; height: 40px; background: rgba(239, 68, 68, 0.1); color: #ef4444; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                        <i class="ph ph-trash" style="font-size: 1.25rem;"></i>
+                    </div>
+                    <div>
+                        <h2 id="dcm-title" style="margin: 0; font-size: 1.25rem;">Confirm Delete</h2>
+                        <p id="dcm-subtitle" style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">This action cannot be undone.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem 0;">
+                <p id="dcm-message" style="margin-bottom: 1rem; line-height: 1.5; color: var(--text-light);">Are you sure you want to delete this?</p>
+                <div id="dcm-summary" class="widget-glass" style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; display: none;">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Impacted Services:</p>
+                    <ul id="dcm-summary-list" style="margin: 0; padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-light);">
+                        <!-- List of services -->
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <button type="button" class="btn-secondary" id="dcm-cancel-btn">Cancel</button>
+                <button type="button" class="btn-primary" id="dcm-confirm-btn" style="background: #ef4444; border-color: #ef4444;">Delete Now</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
