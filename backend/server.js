@@ -433,6 +433,83 @@ app.put('/businesses/:id', authenticateToken, checkDbConnection, async (req, res
     }
 });
 
+// Register Business
+app.post('/businesses/register', authenticateToken, checkDbConnection, async (req, res) => {
+    const userId = req.user.id;
+    const { bizId, name, contact_name, contact_phone, gst_vat, registered_address } = req.body;
+
+    if (!name || !contact_name || !contact_phone || !registered_address) {
+        return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    try {
+        if (bizId) {
+            // Update existing rejected business
+            const query = `
+                UPDATE businesses 
+                SET name = ?, contact_name = ?, contact_phone = ?, gst_vat = ?, registered_address = ?, status = 'pending', reject_reason = NULL
+                WHERE id = ? AND user_id = ?
+            `;
+            await db.promise().query(query, [name, contact_name, contact_phone, gst_vat, registered_address, bizId, userId]);
+            res.json({ success: true, message: 'Registration resubmitted successfully' });
+        } else {
+            // Create new pending business
+            const query = `
+                INSERT INTO businesses (user_id, name, contact_name, contact_phone, gst_vat, registered_address, status)
+                VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            `;
+            const [result] = await db.promise().query(query, [userId, name, contact_name, contact_phone, gst_vat, registered_address]);
+            res.status(201).json({ success: true, message: 'Business registered successfully', businessId: result.insertId });
+        }
+    } catch (err) {
+        console.error('Error registering business:', err);
+        res.status(500).json({ success: false, message: 'Server error during registration' });
+    }
+});
+
+// Admin: Get Approvals
+app.get('/admin/approvals', authenticateToken, checkDbConnection, async (req, res) => {
+    try {
+        const query = `
+            SELECT b.*, u.name as owner_name, u.email as owner_email
+            FROM businesses b
+            JOIN users u ON b.user_id = u.id
+            WHERE b.status = 'pending'
+            ORDER BY b.created_at ASC
+        `;
+        const [results] = await db.promise().query(query);
+        res.json({ success: true, approvals: results });
+    } catch (err) {
+        console.error('Error fetching approvals:', err);
+        res.status(500).json({ success: false, message: 'Server error fetching approvals' });
+    }
+});
+
+// Admin: Approve Business
+app.put('/admin/approvals/:id/approve', authenticateToken, checkDbConnection, async (req, res) => {
+    const bizId = req.params.id;
+    try {
+        await db.promise().query('UPDATE businesses SET status = "active", reject_reason = NULL WHERE id = ?', [bizId]);
+        res.json({ success: true, message: 'Business approved' });
+    } catch (err) {
+        console.error('Error approving business:', err);
+        res.status(500).json({ success: false, message: 'Server error approving business' });
+    }
+});
+
+// Admin: Reject Business
+app.put('/admin/approvals/:id/reject', authenticateToken, checkDbConnection, async (req, res) => {
+    const bizId = req.params.id;
+    const { reason } = req.body;
+    try {
+        await db.promise().query('UPDATE businesses SET status = "rejected", reject_reason = ? WHERE id = ?', [reason || 'No reason provided', bizId]);
+        res.json({ success: true, message: 'Business rejected' });
+    } catch (err) {
+        console.error('Error rejecting business:', err);
+        res.status(500).json({ success: false, message: 'Server error rejecting business' });
+    }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`GoalTech Backend running at http://localhost:${PORT}`);

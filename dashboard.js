@@ -95,34 +95,66 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('.nav-link');
     const viewSections = document.querySelectorAll('.view-section');
 
-    // Simple robust router based on text content since we don't have separate IDs on the nav
+    function navigateToView(viewId, updateUrl = true) {
+        // Hide all views
+        viewSections.forEach(view => {
+            view.classList.remove('active');
+        });
+
+        // Determine link text for active state
+        let linkText = 'Dashboard';
+        if (viewId === 'view-business-management') {
+            linkText = 'Business Mgmt';
+        }
+
+        // Show appropriate view
+        const targetView = document.getElementById(viewId);
+        if (targetView) targetView.classList.add('active');
+
+        // Execute view-specific logic
+        if (viewId === 'view-business-management') {
+            fetchBusinesses();
+        }
+
+        // Update nav links active state
+        navLinks.forEach(l => {
+            l.classList.toggle('active', l.querySelector('span').textContent === linkText);
+        });
+
+        // Update URL
+        if (updateUrl) {
+            const url = new URL(window.location);
+            const tabName = viewId.replace('view-', '');
+            url.searchParams.set('tab', tabName);
+            window.history.pushState({ viewId }, '', url);
+        }
+
+        // On mobile, close sidebar
+        if (window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar && overlay && sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }
+    }
+
+    // Expose for other actions (like cancel/save) if needed
+    window.navigateToView = navigateToView;
+
+    // Handle clicks
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-
-            // Remove active class from all links
-            navLinks.forEach(l => l.classList.remove('active'));
-            // Add active class to clicked link
-            link.classList.add('active');
-
             const linkText = link.querySelector('span').textContent;
-
-            // Hide all views
-            viewSections.forEach(view => {
-                view.classList.remove('active');
-            });
-
-            // Show appropriate view based on link clicked
             if (linkText === 'Dashboard') {
-                document.getElementById('view-dashboard').classList.add('active');
+                navigateToView('view-dashboard');
             } else if (linkText === 'Business Mgmt') {
-                document.getElementById('view-business-management').classList.add('active');
-                fetchBusinesses();
-            }
-
-            // On mobile, close sidebar after clicking
-            if (window.innerWidth <= 768) {
-                toggleSidebar();
+                navigateToView('view-business-management');
+            } else if (linkText === 'Approvals') {
+                navigateToView('view-approvals');
+                fetchApprovals();
             }
         });
     });
@@ -132,17 +164,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (brandHomeBtn) {
         brandHomeBtn.addEventListener('click', (e) => {
             e.preventDefault();
-
-            // Remove active class from all links, add to dashboard
-            navLinks.forEach(l => l.classList.remove('active'));
-            const dashLink = Array.from(navLinks).find(l => l.querySelector('span').textContent === 'Dashboard');
-            if (dashLink) dashLink.classList.add('active');
-
-            // Hide all views, show dashboard
-            viewSections.forEach(view => view.classList.remove('active'));
-            document.getElementById('view-dashboard').classList.add('active');
+            navigateToView('view-dashboard');
         });
     }
+
+    // Initialize from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'business-management') {
+        navigateToView('view-business-management', false);
+    } else if (tabParam === 'add-business') {
+        navigateToView('view-add-business', false);
+    } else {
+        navigateToView('view-dashboard', false);
+    }
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.viewId) {
+            navigateToView(e.state.viewId, false);
+        } else {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get('tab');
+            if (tab === 'business-management') {
+                navigateToView('view-business-management', false);
+            } else if (tab === 'add-business') {
+                navigateToView('view-add-business', false);
+            } else {
+                navigateToView('view-dashboard', false);
+            }
+        }
+    });
 
     // ═══════════════════════════════════════════════════
     //  ADD BUSINESS WIZARD — Full Logic
@@ -172,10 +224,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTypesList    = document.getElementById('saved-types-list');
     const addAnotherBtn     = document.getElementById('add-another-type-btn');
     const builderPanel      = document.getElementById('type-builder-panel');
-
     // Advanced Pricing
     const btnAddWknd        = document.getElementById('btn-add-weekend');
     const btnAddPeak        = document.getElementById('btn-add-peak');
+
+    // Amenity search & custom modal
+    const amenitySearch     = document.getElementById('amenity-search');
+    const customTrigger     = document.getElementById('custom-amenity-trigger');
+    const customModal       = document.getElementById('custom-amenity-modal');
+    const customNameInp     = document.getElementById('custom-amenity-name');
+    const addCustomBtn      = document.getElementById('add-custom-amenity-btn');
+    const closeCustom       = document.getElementById('close-custom-modal');
     const tierWknd          = document.getElementById('tier-weekend');
     const tierPeak          = document.getElementById('tier-peak');
     const btnRemoveWknd     = document.getElementById('btn-remove-weekend');
@@ -283,6 +342,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Amenities Selection
+    const amenityChips = document.querySelectorAll('.amenity-chip');
+    amenityChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('selected');
+        });
+    });
+
+    // ── Dynamic Amenities Picker Options ──
+    const defaultAmenitiesList = [
+        { id: 'wifi', label: 'WiFi', icon: 'ph-wifi-high' },
+        { id: 'parking', label: 'Parking', icon: 'ph-park' },
+        { id: 'water', label: 'Drinking Water', icon: 'ph-drop' },
+        { id: 'changing_room', label: 'Changing Room', icon: 'ph-door' },
+        { id: 'shower', label: 'Shower', icon: 'ph-shower' },
+        { id: 'lights', label: 'Floodlights', icon: 'ph-lightbulb' },
+        { id: 'locker', label: 'Lockers', icon: 'ph-lock' },
+        { id: 'first_aid', label: 'First Aid', icon: 'ph-first-aid' },
+        { id: 'cctv', label: 'CCTV', icon: 'ph-video-camera' },
+        { id: 'cafe', label: 'Cafeteria', icon: 'ph-coffee' },
+        { id: 'ac', label: 'Air Conditioning', icon: 'ph-snowflake' },
+        { id: 'power_backup', label: 'Power Backup', icon: 'ph-plug' }
+    ];
+
+    let customAmenities = [];
+    let selectedAmenities = [];
+
     let currentStep = 1;
     let currentTypeDraft = { type: null, label: null, icon: null, needsMode: false, mode: null };
     let savedBusinessTypes = [];          // array of saved type objects
@@ -292,8 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Route: empty-state & top-bar "Add New Business" → wizard ──
     const openAddWizard = () => {
         editingBusinessId = null;
-        viewSections.forEach(v => v.classList.remove('active'));
-        viewAddBusiness.classList.add('active');
+        navigateToView('view-add-business');
         initWizardState();
         // Update header title if it was changed by edit
         const wizardTitle = viewAddBusiness.querySelector('.page-title');
@@ -323,8 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!confirmed) return;
             }
 
-            viewSections.forEach(v => v.classList.remove('active'));
-            document.getElementById('view-business-management').classList.add('active');
+            navigateToView('view-business-management');
         });
     }
 
@@ -368,8 +452,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (substepANext) substepANext.disabled = true;
 
         // Show A, hide B
-        if (substepA) substepA.classList.add('active');
-        if (substepB) substepB.classList.remove('active');
+        if (substepA) substepA.classList.remove('hidden');
+        if (substepB) substepB.classList.add('hidden');
     }
 
     function resetSubstepBFields() {
@@ -381,8 +465,11 @@ document.addEventListener('DOMContentLoaded', () => {
             cb.checked = day !== 'Sunday';
             syncDayRow(row);
         });
-        // Amenity chips
-        document.querySelectorAll('.amenity-chip').forEach(c => c.classList.remove('selected'));
+        // Amenity chips reset
+        selectedAmenities = [];
+        customAmenities   = [];
+        if (amenitySearch) amenitySearch.value = '';
+        renderAmenities();
         // Fields
         const price = document.getElementById('facilityPrice'); if (price) price.value = '';
         const wprice = document.getElementById('facilityWeekendPrice'); if (wprice) wprice.value = '';
@@ -442,12 +529,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const types = biz.facility_types ? biz.facility_types.split(',') : [];
             const typeChips = types.map(t => `<span class="biz-type-chip">${t.replace(/_/g, ' ')}</span>`).join('');
 
+            let badgeClass = '';
+            let badgeText = '';
+            if (biz.status === 'active') { badgeClass = 'badge-active'; badgeText = 'Active'; }
+            else if (biz.status === 'inactive') { badgeClass = 'badge-inactive'; badgeText = 'Inactive'; }
+            else if (biz.status === 'pending') { badgeClass = 'badge-warning'; badgeText = 'Pending Approval'; }
+            else if (biz.status === 'rejected') { badgeClass = 'badge-danger'; badgeText = 'Rejected'; }
+
+            let actionButtons = '';
+            if (biz.status === 'active' || biz.status === 'inactive') {
+                actionButtons = `
+                    <button class="biz-btn biz-btn-manage edit-biz-btn" data-id="${biz.id}">
+                        <i class="ph ph-pencil-simple"></i> Edit
+                    </button>
+                    <button class="biz-btn biz-btn-view view-biz-btn" data-id="${biz.id}">
+                        <i class="ph ph-eye"></i> View
+                    </button>
+                `;
+            } else if (biz.status === 'rejected') {
+                actionButtons = `
+                    <button class="biz-btn biz-btn-manage retry-biz-btn" data-id="${biz.id}" data-name="${biz.name}" data-contact="${biz.contact_name || ''}" data-phone="${biz.contact_phone || ''}" data-gst="${biz.gst_vat || ''}" data-address="${biz.registered_address || ''}" data-reason="${biz.reject_reason || ''}">
+                        <i class="ph ph-arrow-counter-clockwise"></i> Fix & Resubmit
+                    </button>
+                `;
+            } else if (biz.status === 'pending') {
+                actionButtons = `
+                    <span style="font-size: 0.85rem; color: var(--text-muted);"><i class="ph ph-hourglass"></i> Under Review</span>
+                `;
+            }
+
             card.innerHTML = `
                 <div class="biz-card-header">
                     <div class="biz-icon-wrapper">
                         <i class="ph-fill ph-storefront"></i>
                     </div>
-                    <div class="biz-badge ${biz.status === 'inactive' ? 'badge-inactive' : ''}">${biz.status === 'active' ? 'Active' : 'Inactive'}</div>
+                    <div class="biz-badge ${badgeClass}">${badgeText}</div>
                 </div>
                 <div class="biz-card-body">
                     <div class="biz-owner">
@@ -470,26 +586,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="biz-card-footer">
                     <div class="biz-actions">
-                        <button class="biz-btn biz-btn-manage edit-biz-btn" data-id="${biz.id}">
-                            <i class="ph ph-pencil-simple"></i> Edit
-                        </button>
-                        <button class="biz-btn biz-btn-view view-biz-btn" data-id="${biz.id}">
-                            <i class="ph ph-eye"></i> View
-                        </button>
+                        ${actionButtons}
                     </div>
                 </div>
             `;
             listGrid.appendChild(card);
         });
 
-        // 🟢 Append Add New Business Card at the end
+        // 🟢 Append Register Business Card at the end
         const addCard = document.createElement('div');
         addCard.className = 'business-card add-biz-card';
         addCard.innerHTML = `
             <div class="add-icon"><i class="ph ph-plus"></i></div>
-            <span>Add New Business</span>
+            <span>Register Business</span>
         `;
-        addCard.addEventListener('click', openAddWizard);
+        addCard.addEventListener('click', () => {
+            document.getElementById('form-register-business').reset();
+            delete document.getElementById('form-register-business').dataset.editId;
+            document.getElementById('reg-rejection-notice').classList.add('hidden');
+            navigateToView('view-register-business');
+        });
         listGrid.appendChild(addCard);
 
         // Add Listeners
@@ -526,12 +642,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('modal-biz-name').textContent = biz.name;
                 
                 const typesGrid = document.getElementById('modal-biz-types');
-                typesGrid.innerHTML = biz.facilities.map(f => `
-                    <div class="detail-item">
-                        <i class="${f.icon || 'ph ph-buildings'}"></i>
-                        <span>${f.label || f.type}</span>
-                    </div>
-                `).join('');
+                typesGrid.innerHTML = biz.facilities.map(f => {
+                    const ams = f.amenities && f.amenities.length > 0 
+                        ? `<div class="modal-amenities-list">${f.amenities.map(a => `<span class="mini-badge">${a.replace(/_/g, ' ')}</span>`).join('')}</div>`
+                        : '';
+                    
+                    return `
+                        <div class="detail-item-card">
+                            <div class="detail-item-header">
+                                <i class="${f.icon || 'ph ph-buildings'}"></i>
+                                <span>${f.label || f.type}</span>
+                            </div>
+                            ${ams}
+                        </div>
+                    `;
+                }).join('');
 
                 const contact = document.getElementById('modal-biz-contact');
                 // Use first facility's contact info as a fallback
@@ -561,8 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 editingBusinessId = biz.id;
                 
                 // Show Wizard
-                viewSections.forEach(v => v.classList.remove('active'));
-                viewAddBusiness.classList.add('active');
+                navigateToView('view-add-business');
                 
                 // Initialize State
                 initWizardState();
@@ -578,18 +702,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Load Facilities
                 savedBusinessTypes = biz.facilities;
-                renderSavedTypesList();
-
-                // Hide builder when editing, we want to see the list first
-                if (builderPanel) builderPanel.classList.add('hidden');
+                
+                // Show 'General' tab by default
+                performWizardNav('general');
 
                 // Update UI
                 const wizardTitle = viewAddBusiness.querySelector('.page-title');
                 if (wizardTitle) wizardTitle.textContent = 'Edit Business';
                 updateLaunchBtn();
                 
-                // Switch Nav
-                navLinks.forEach(l => l.classList.remove('active'));
+                attachChangeTrackers();
             } else {
                 showToast('Error loading business: ' + data.message);
             }
@@ -647,12 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // After saving, route back to main management view
                     setTimeout(() => {
-                        viewSections.forEach(v => v.classList.remove('active'));
-                        document.getElementById('view-business-management').classList.add('active');
-                        // Update nav active state
-                        navLinks.forEach(l => {
-                            l.classList.toggle('active', l.textContent.trim() === 'Business Mgmt');
-                        });
+                        navigateToView('view-business-management');
                     }, 1000);
                 } else {
                     showToast('Error: ' + data.message);
@@ -755,6 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sub-step A → B
     if (substepANext) {
         substepANext.addEventListener('click', () => {
+            console.log("Substep A Next button clicked!");
             // Build title for sub-step B
             let title = currentTypeDraft.label;
             if (currentTypeDraft.mode) {
@@ -763,19 +881,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (substepBTitle) substepBTitle.textContent = `Configure: ${title}`;
 
+            console.log("Calling resetSubstepBFields...");
             // Reset B fields for new type
             resetSubstepBFields();
 
-            substepA.classList.remove('active');
-            substepB.classList.add('active');
+            console.log("Toggling classes for substepA and substepB...");
+            substepA.classList.add('hidden');
+            substepB.classList.remove('hidden');
+            console.log("Transitions complete.");
         });
     }
 
     // Sub-step B → A (back)
     if (substepBBack) {
         substepBBack.addEventListener('click', () => {
-            substepB.classList.remove('active');
-            substepA.classList.add('active');
+            substepB.classList.add('hidden');
+            substepA.classList.remove('hidden');
         });
     }
 
@@ -796,8 +917,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Collect amenities
-            const amenities = [...document.querySelectorAll('.amenity-chip.selected')]
-                .map(c => c.dataset.amenity);
+            const allPossible = [...defaultAmenitiesList, ...customAmenities];
+            const amenities = allPossible
+                .filter(a => selectedAmenities.includes(a.id))
+                .map(a => a.label);
 
             const savedType = {
                 ...currentTypeDraft,
@@ -815,115 +938,299 @@ document.addEventListener('DOMContentLoaded', () => {
                 website:      document.getElementById('facilityWebsite')?.value || ''
             };
 
-            savedBusinessTypes.push(savedType);
-            renderSavedTypesList();
+            if (activeWizardTab === 'new') {
+                savedBusinessTypes.push(savedType);
+            } else if (typeof activeWizardTab === 'number') {
+                savedBusinessTypes[activeWizardTab] = savedType;
+            }
 
-            // Hide builder panel after saving a service
-            if (builderPanel) builderPanel.classList.add('hidden');
-
+            setWizardChanged(false);
             updateLaunchBtn();
-            showToast(`"${savedType.label}" saved successfully!`);
+            showToast(`"${savedType.label}" added!`);
+
+            // After saving a service, auto-navigate back to services list
+            performWizardNav('services-list');
         });
     }
 
-    function renderSavedTypesList() {
-        if (!savedTypesList) return;
-        savedTypesList.innerHTML = '';
-        savedTypesList.className = 'businesses-list-grid saved-services-grid'; // Use same grid as main dashboard
+    // ── NEW: Side Navigation Logic ──
+    let activeWizardTab = 'general'; // 'general', 'services-list', or index/new
+    let wizardTransitionTarget = null;
+    let wizardFormHasChanges = false;
 
-        // 1. Add Existing Services as cards
+    // Track changes globally in the wizard
+    function setWizardChanged(changed) {
+        wizardFormHasChanges = changed;
+        const saveBtn = document.getElementById('save-business-type-btn');
+        if (saveBtn) {
+            saveBtn.classList.toggle('has-changes', changed);
+        }
+    }
+
+    // Attach listeners to all inputs to track changes
+    function attachChangeTrackers() {
+        const inputs = document.querySelectorAll('.wizard-main input, .wizard-main textarea, .wizard-main select');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => setWizardChanged(true));
+            input.addEventListener('change', () => setWizardChanged(true));
+        });
+    }
+
+    function performWizardNav(target) {
+        activeWizardTab = target;
+        unsavedModal?.classList.add('hidden');
+        setWizardChanged(false);
+
+        const wizardHeader = document.querySelector('#view-add-business .page-header');
+        const generalSection = document.getElementById('wizard-section-general');
+        const servicesListSection = document.getElementById('wizard-section-services-list');
+        const serviceEditSection = document.getElementById('wizard-section-service-edit');
+
+        // Hide all
+        [generalSection, servicesListSection, serviceEditSection].forEach(s => {
+            if (s) {
+                s.classList.add('hidden-section');
+                s.classList.remove('active-wizard-section');
+            }
+        });
+
+        // Header visibility toggle removed to prevent jumpy layout shifts
+
+        if (target === 'general') {
+            currentSection = generalSection;
+            // Hide Save Business on General Info tab
+            document.getElementById('save-business-btn')?.classList.add('hidden');
+        } else if (target === 'services-list') {
+            currentSection = servicesListSection;
+            renderServicesGrid();
+            // Show Save Business button on the listing page
+            const saveBizBtn = document.getElementById('save-business-btn');
+            if (saveBizBtn) {
+                saveBizBtn.classList.remove('hidden');
+                const btnText = saveBizBtn.querySelector('.btn-text');
+                if (btnText) btnText.textContent = editingBusinessId ? 'Update Business' : 'Save Business';
+            }
+        } else if (typeof target === 'number' || target === 'new') {
+            currentSection = serviceEditSection;
+            const isEditing = typeof target === 'number';
+            // Toggle Save / Update label
+            const saveBtn = document.getElementById('save-business-type-btn');
+            const saveBtnText = saveBtn?.querySelector('.btn-text');
+            if (saveBtnText) saveBtnText.textContent = isEditing ? 'Update' : 'Save';
+            // Hide Save Business when entering the edit form or general info
+            document.getElementById('save-business-btn')?.classList.add('hidden');
+            if (target === 'new') {
+                resetSubstepA();
+            } else {
+                const type = savedBusinessTypes[target];
+                if (type) loadTypeIntoBuilder(type);
+            }
+        }
+
+        if (currentSection) {
+            currentSection.classList.remove('hidden-section');
+            currentSection.classList.add('active-wizard-section');
+        }
+        
+        // Update sidebar highlights and sub-menu
+        renderWizardSidebar();
+    }
+
+    function renderWizardSidebar() {
+        const subList = document.getElementById('sidebar-sub-services');
+        if (subList) {
+            subList.innerHTML = '';
+            savedBusinessTypes.forEach((type, index) => {
+                const item = document.createElement('div');
+                item.className = `sidebar-sub-item ${activeWizardTab === index ? 'active' : ''}`;
+                item.innerHTML = `<i class="ph ${type.icon || 'ph-dot'}"></i><span>${type.label}</span>`;
+                item.onclick = () => attemptWizardNav(index);
+                subList.appendChild(item);
+            });
+        }
+
+        document.querySelectorAll('.wizard-sidebar .step-item').forEach(item => {
+            const step = item.dataset.step;
+            const isServicesActive = (step === 'services-list' && (typeof activeWizardTab === 'number' || activeWizardTab === 'new' || activeWizardTab === 'services-list'));
+            const isGeneralActive = (step === 'general' && activeWizardTab === 'general');
+            
+            item.classList.toggle('active', isGeneralActive || isServicesActive);
+        });
+    }
+
+    function renderServicesGrid() {
+        const grid = document.getElementById('services-grid-view');
+        if (!grid) return;
+        grid.innerHTML = '';
+
         savedBusinessTypes.forEach((type, index) => {
             const card = document.createElement('div');
             card.className = 'business-card service-card';
-            
-            const modeLabels = { indoor: 'Indoor', outdoor: 'Outdoor', both: 'Indoor & Outdoor' };
-            const modeStr = type.mode ? modeLabels[type.mode] : '';
-            const openDays = Object.values(type.hours).filter(h => h.open).length;
+            const openDays = Object.values(type.hours || {}).filter(h => h.open).length;
 
             card.innerHTML = `
                 <div class="biz-card-header">
-                    <div class="biz-icon-wrapper">
-                        <i class="ph-fill ${type.icon || 'ph-buildings'}"></i>
-                    </div>
+                    <div class="biz-icon-wrapper"><i class="ph-fill ${type.icon || 'ph-buildings'}"></i></div>
                     <div class="biz-badge ${type.status === 'inactive' ? 'badge-inactive' : ''}">${type.status === 'active' ? 'Active' : 'Inactive'}</div>
                 </div>
                 <div class="biz-card-body">
                     <div class="biz-name">${type.label}</div>
                     <div class="biz-meta-info">
-                        <div class="meta-item">
-                            <i class="ph ph-calendar-check"></i>
-                            <span>${openDays} Open Days</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="ph ph-users"></i>
-                            <span>Max ${type.capacity || 'N/A'} Capacity</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="ph ph-tag"></i>
-                            <span>₹${type.price || 0}/hr base</span>
-                        </div>
+                        <div class="meta-item"><i class="ph ph-calendar-check"></i><span>${openDays} Open Days</span></div>
+                        <div class="meta-item"><i class="ph ph-tag"></i><span>₹${type.price || 0}/hr base</span></div>
                     </div>
                 </div>
                 <div class="biz-card-footer">
                     <div class="biz-actions">
-                        <button type="button" class="biz-btn biz-btn-manage edit-service-btn" data-index="${index}">
-                            <i class="ph ph-pencil-simple"></i> Edit
-                        </button>
-                        <button type="button" class="biz-btn biz-btn-view remove-service-btn" data-index="${index}">
-                            <i class="ph ph-trash"></i> Remove
-                        </button>
+                        <button type="button" class="biz-btn biz-btn-manage edit-service-btn"><i class="ph ph-pencil-simple"></i> Edit</button>
                     </div>
                 </div>
             `;
-            
-            // Listeners
-            card.querySelector('.edit-service-btn').addEventListener('click', () => {
-                loadTypeIntoBuilder(type);
-                savedBusinessTypes.splice(index, 1);
-                renderSavedTypesList();
-                if (builderPanel) builderPanel.classList.remove('hidden');
-                updateLaunchBtn();
-            });
-
-            card.querySelector('.remove-service-btn').addEventListener('click', () => {
-                savedBusinessTypes.splice(index, 1);
-                renderSavedTypesList();
-                updateLaunchBtn();
-            });
-
-            savedTypesList.appendChild(card);
+            card.querySelector('.edit-service-btn').onclick = () => performWizardNav(index);
+            grid.appendChild(card);
         });
 
-        // 2. Add "Add Service" Card (Ghost card)
+        // Add Service Ghost Card
         const addCard = document.createElement('div');
         addCard.className = 'business-card add-biz-card add-service-ghost-card';
         addCard.innerHTML = `
             <div class="add-icon"><i class="ph ph-plus"></i></div>
             <span>Add Service</span>
         `;
-        addCard.addEventListener('click', () => {
-            if (builderPanel) builderPanel.classList.remove('hidden');
-            // Reset wizard to substep A
-            resetSubstepA();
-            renderSavedTypesList(); // Re-render to show builder active? No, just show panel.
-        });
-        savedTypesList.appendChild(addCard);
+        addCard.onclick = () => performWizardNav('new');
+        grid.appendChild(addCard);
     }
 
-    // Call this instead of renderSavedTypeCard
-    function updateWizardTypesUI() {
-        renderSavedTypesList();
-        
-        // Hide/Show builder based on if someone just clicked add or if we have 0 types
-        if (savedBusinessTypes.length === 0) {
-            if (builderPanel) builderPanel.classList.remove('hidden');
+    // Sidebar Menu Listeners
+    document.querySelectorAll('.wizard-sidebar .step-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const step = item.dataset.step;
+            attemptWizardNav(step);
+        });
+    });
+
+    // Back button in editor
+    const backToServicesBtn = document.getElementById('btn-back-to-services');
+    backToServicesBtn?.addEventListener('click', () => {
+        attemptWizardNav('services-list');
+    });
+
+    const btnGeneralSaveNext = document.getElementById('btn-general-save-next');
+    btnGeneralSaveNext?.addEventListener('click', () => {
+        attemptWizardNav('services-list');
+    });
+
+    // Save Business button (on services listing page)
+    const saveBizBtn = document.getElementById('save-business-btn');
+    saveBizBtn?.addEventListener('click', () => {
+        const token = localStorage.getItem('gt_token');
+        if (!token) { showToast('Session expired. Please login again.'); return; }
+
+        businessName = document.getElementById('businessName')?.value?.trim() || businessName;
+        if (!businessName || businessName.length < 3) {
+            showToast('Please enter a valid business name first (General Info tab).');
+            return;
+        }
+
+        const bizStatusToggle = document.getElementById('business-status-toggle');
+        const payload = {
+            name: businessName,
+            status: bizStatusToggle?.checked ? 'active' : 'inactive',
+            facilities: savedBusinessTypes
+        };
+
+        const saveBtnText = saveBizBtn.querySelector('.btn-text');
+        if (saveBtnText) saveBtnText.textContent = 'Saving...';
+        saveBizBtn.disabled = true;
+
+        const url = editingBusinessId ? `/businesses/${editingBusinessId}` : '/businesses';
+        const method = editingBusinessId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            saveBizBtn.disabled = false;
+            const finalLabel = editingBusinessId ? 'Update Business' : 'Save Business';
+            if (saveBtnText) saveBtnText.textContent = finalLabel;
+            
+            if (data.success) {
+                showToast(editingBusinessId ? 'Business updated!' : 'Business added!');
+                
+                // Reset wizard state
+                businessName = '';
+                const businessNameInput = document.getElementById('businessName');
+                if (businessNameInput) businessNameInput.value = '';
+                savedBusinessTypes = [];
+                resetSubstepA();
+
+                // Navigate back to the business listing page
+                navigateToView('view-business-management', true);
+                fetchBusinesses();
+            } else {
+                showToast('Error: ' + (data.message || 'Could not save business.'));
+            }
+        })
+        .catch(err => {
+            saveBizBtn.disabled = false;
+            const finalLabel = editingBusinessId ? 'Update Business' : 'Save Business';
+            if (saveBtnText) saveBtnText.textContent = finalLabel;
+            console.error(err);
+            showToast('Connection error. Please try again.');
+        });
+    });
+
+    const unsavedModal = document.getElementById('unsaved-changes-modal');
+    const ignoreBtn   = document.getElementById('unsaved-ignore-btn');
+    const saveStayBtn = document.getElementById('unsaved-save-btn');
+
+    function attemptWizardNav(target) {
+        if (activeWizardTab === target) return;
+
+        if (wizardFormHasChanges) {
+            wizardTransitionTarget = target;
+            unsavedModal?.classList.remove('hidden');
         } else {
-            // If we have types, we usually show the list and hide builder until "Add Service" is clicked
-            // But we can check if a draft is being edited.
+            performWizardNav(target);
         }
     }
 
+    ignoreBtn?.addEventListener('click', () => {
+        if (wizardTransitionTarget !== null) {
+            performWizardNav(wizardTransitionTarget);
+            wizardTransitionTarget = null;
+        }
+    });
+
+    saveStayBtn?.addEventListener('click', () => {
+        // Trigger the appropriate save button
+        if (activeWizardTab === 'general') {
+            // General info usually auto-persists in the draftBusiness object
+            performWizardNav(wizardTransitionTarget);
+        } else {
+            const saveServiceBtn = document.getElementById('save-business-type-btn');
+            saveServiceBtn?.click();
+            // The click handler for saveServiceBtn will handle the nav after successful save
+        }
+    });
+
+    // Add New Service handlers
+    const miniAddBtn = document.getElementById('sidebar-add-service-mini');
+    miniAddBtn?.addEventListener('click', () => {
+        attemptWizardNav('new');
+    });
+
+    // Override the old renderSavedTypesList to use sidebar
+    function renderSavedTypesList() {
+        renderWizardSidebar();
+        updateLaunchBtn();
+    }
+
     function loadTypeIntoBuilder(type) {
+        if (!type) return;
         currentTypeDraft = { ...type };
         
         if (facStatusToggle) {
@@ -933,11 +1240,13 @@ document.addEventListener('DOMContentLoaded', () => {
             facStatusText.className = `status-tiny ${isActive ? 'active' : 'inactive'}`;
         }
 
-        if (selectedTypeText) selectedTypeText.textContent = type.label;
-        if (selectedTypeIcon) selectedTypeIcon.className = `ph-fill ${type.icon}`;
+        if (selectedTypeText) selectedTypeText.textContent = type.label || 'Service';
+        if (selectedTypeIcon) selectedTypeIcon.className = `ph-fill ${type.icon || 'ph-buildings'}`;
+        
         typeOptions.forEach(o => {
             o.classList.toggle('selected', o.dataset.value === type.type);
         });
+
         if (type.needsMode && facilityModeGroup) {
             facilityModeGroup.classList.remove('hidden');
             facilityModeInputs.forEach(i => { i.checked = (i.value === type.mode); });
@@ -948,41 +1257,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Open sub-step B directly with the saved data
         const modeLabels = { indoor: 'Indoor', outdoor: 'Outdoor', both: 'Indoor & Outdoor' };
-        let title = type.label;
+        let title = type.label || 'Service';
         if (type.mode) title += ` — ${modeLabels[type.mode]}`;
         if (substepBTitle) substepBTitle.textContent = `Edit: ${title}`;
 
         // Restore hours
-        document.querySelectorAll('.day-row').forEach(row => {
-            const day = row.dataset.day;
-            const saved = type.hours[day];
-            if (!saved) return;
-            const cb = row.querySelector('.day-check');
-            const openI = row.querySelector('.open-time');
-            const closeI = row.querySelector('.close-time');
-            if (cb) cb.checked = saved.open;
-            if (openI && saved.openTime) openI.value = saved.openTime;
-            if (closeI && saved.closeTime) closeI.value = saved.closeTime;
-            syncDayRow(row);
-        });
+        if (type.hours) {
+            document.querySelectorAll('.day-row').forEach(row => {
+                const day = row.dataset.day;
+                const saved = type.hours[day];
+                if (!saved) return;
+                const cb = row.querySelector('.day-check');
+                const openI = row.querySelector('.open-time');
+                const closeI = row.querySelector('.close-time');
+                if (cb) cb.checked = !!saved.open;
+                if (openI && saved.openTime) openI.value = saved.openTime;
+                if (closeI && saved.closeTime) closeI.value = saved.closeTime;
+                syncDayRow(row);
+            });
+        }
 
         // Restore amenities
-        document.querySelectorAll('.amenity-chip').forEach(chip => {
-            chip.classList.toggle('selected', type.amenities.includes(chip.dataset.amenity));
-        });
+        selectedAmenities = [];
+        customAmenities   = [];
+        if (type.amenities && Array.isArray(type.amenities)) {
+            type.amenities.forEach(label => {
+                const def = defaultAmenitiesList.find(a => a.label === label);
+                if (def) {
+                    selectedAmenities.push(def.id);
+                } else {
+                    const cid = 'custom_' + Date.now() + Math.random();
+                    customAmenities.push({ id: cid, label: label, icon: 'ph-star' });
+                    selectedAmenities.push(cid);
+                }
+            });
+        }
+        renderAmenities();
 
         // Restore fields
-        const pr = document.getElementById('facilityPrice');     if (pr) pr.value = type.price || '';
+        const pr = document.getElementById('facilityPrice'); if (pr) pr.value = type.price || '';
         
-        // Restore Advanced Pricing
         if (type.weekendPrice) {
             if (tierWknd) tierWknd.classList.remove('hidden');
             if (btnAddWknd) btnAddWknd.style.display = 'none';
             const wepr = document.getElementById('facilityWeekendPrice');
             if (wepr) wepr.value = type.weekendPrice;
-            document.getElementById('val-weekend-price').textContent = `₹${type.weekendPrice}`;
-            document.getElementById('tier-weekend-summary').classList.remove('hidden');
-            document.getElementById('tier-weekend-edit').classList.add('hidden');
+            const vwp = document.getElementById('val-weekend-price');
+            if (vwp) vwp.textContent = `₹${type.weekendPrice}`;
+            document.getElementById('tier-weekend-summary')?.classList.remove('hidden');
+            document.getElementById('tier-weekend-edit')?.classList.add('hidden');
         } else {
             if (tierWknd) tierWknd.classList.add('hidden');
             if (btnAddWknd) btnAddWknd.style.display = 'inline-flex';
@@ -997,10 +1320,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pkst && type.peakStart) pkst.value = type.peakStart;
             const pken = document.getElementById('facilityPeakEnd');
             if (pken && type.peakEnd) pken.value = type.peakEnd;
-            document.getElementById('val-peak-price').textContent = `₹${type.peakPrice}`;
-            document.getElementById('val-peak-time').textContent = `${type.peakStart} - ${type.peakEnd}`;
-            document.getElementById('tier-peak-summary').classList.remove('hidden');
-            document.getElementById('tier-peak-edit').classList.add('hidden');
+            const vpp = document.getElementById('val-peak-price');
+            if (vpp) vpp.textContent = `₹${type.peakPrice}`;
+            const vpt = document.getElementById('val-peak-time');
+            if (vpt) vpt.textContent = `${type.peakStart || ''} - ${type.peakEnd || ''}`;
+            document.getElementById('tier-peak-summary')?.classList.remove('hidden');
+            document.getElementById('tier-peak-edit')?.classList.add('hidden');
         } else {
             if (tierPeak) tierPeak.classList.add('hidden');
             if (btnAddPeak) btnAddPeak.style.display = 'inline-flex';
@@ -1010,20 +1335,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const desc = document.getElementById('facilityDesc');    if (desc) desc.value = type.description || '';
         const dc = document.getElementById('desc-char-count');
         if (dc && desc) { dc.textContent = `${desc.value.length} / 300`; }
-        const ph = document.getElementById('facilityPhone');     if (ph)  ph.value  = type.phone   || '';
-        const wb = document.getElementById('facilityWebsite');   if (wb)  wb.value  = type.website || '';
+        const ph = document.getElementById('facilityPhone');     if (ph) ph.value = type.phone || '';
+        const wb = document.getElementById('facilityWebsite');   if (wb) wb.value = type.website || '';
 
         // Jump straight to sub-step B
-        if (substepA) substepA.classList.remove('active');
-        if (substepB) substepB.classList.add('active');
+        if (substepA) substepA.classList.add('hidden');
+        if (substepB) substepB.classList.remove('hidden');
+        
+        setWizardChanged(false); 
     }
 
     // ── Add Another Business Type ──
     if (addAnotherBtn) {
         addAnotherBtn.addEventListener('click', () => {
-            addAnotherBtn.classList.add('hidden');
-            if (builderPanel) builderPanel.classList.remove('hidden');
-            resetSubstepA();
+            const wizardTitle = viewAddBusiness.querySelector('.page-title');
+            if (wizardTitle) wizardTitle.textContent = 'Add New Business';
+        
+            performWizardNav('general');
+            attachChangeTrackers();
+            updateLaunchBtn();
         });
     }
 
@@ -1068,10 +1398,101 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Amenity chip toggle ──
-    document.querySelectorAll('.amenity-chip').forEach(chip => {
-        chip.addEventListener('click', () => chip.classList.toggle('selected'));
-    });
+    // ── Dynamic Amenities Picker ──
+
+    function renderAmenities(filter = '') {
+        const grid = document.getElementById('amenities-selector');
+        const selectedList = document.getElementById('selected-amenities-list');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        const all = [...defaultAmenitiesList, ...customAmenities];
+        
+        const filtered = all.filter(a => a.label.toLowerCase().includes(filter.toLowerCase()));
+
+        filtered.forEach(am => {
+            const isSelected = selectedAmenities.includes(am.id);
+            const chip = document.createElement('div');
+            chip.className = `amenity-chip ${isSelected ? 'selected' : ''}`;
+            chip.innerHTML = `<i class="ph ${am.icon || 'ph-star'}"></i><span>${am.label}</span>`;
+            chip.addEventListener('click', () => {
+                if (isSelected) {
+                    selectedAmenities = selectedAmenities.filter(id => id !== am.id);
+                } else {
+                    selectedAmenities.push(am.id);
+                }
+                renderAmenities(filter);
+            });
+            grid.appendChild(chip);
+        });
+
+        // Update selected list (top row of tags)
+        if (selectedList) {
+            const selectedData = all.filter(a => selectedAmenities.includes(a.id));
+            if (selectedData.length > 0) {
+                selectedList.classList.remove('hidden');
+                selectedList.innerHTML = selectedData.map(s => `
+                    <div class="amenity-tag">
+                        <span>${s.label}</span>
+                        <i class="ph ph-x remove-tag" data-id="${s.id}"></i>
+                    </div>
+                `).join('');
+
+                selectedList.querySelectorAll('.remove-tag').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        selectedAmenities = selectedAmenities.filter(id => id !== btn.dataset.id);
+                        renderAmenities(filter);
+                    });
+                });
+            } else {
+                selectedList.classList.add('hidden');
+            }
+        }
+    }
+
+    if (amenitySearch) {
+        amenitySearch.addEventListener('input', (e) => {
+            renderAmenities(e.target.value);
+        });
+    }
+
+    if (customTrigger && customModal) {
+        customTrigger.addEventListener('click', () => {
+            customModal.classList.remove('hidden');
+            if (customNameInp) customNameInp.focus();
+        });
+    }
+
+    if (closeCustom) {
+        closeCustom.addEventListener('click', () => {
+            customModal.classList.add('hidden');
+            if (customNameInp) customNameInp.value = '';
+        });
+    }
+
+    if (addCustomBtn && customModal) {
+        addCustomBtn.addEventListener('click', () => {
+            const name = customNameInp?.value?.trim();
+            if (name) {
+                const id = 'custom_' + Date.now();
+                customAmenities.push({ id, label: name, icon: 'ph-star' });
+                selectedAmenities.push(id);
+                renderAmenities(amenitySearch?.value || '');
+                
+                // Reset & Close
+                customModal.classList.add('hidden');
+                if (customNameInp) customNameInp.value = '';
+            }
+        });
+
+        // Add with Enter key
+        customNameInp?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addCustomBtn.click();
+        });
+    }
+
+    // Initialize
+    renderAmenities();
 
     // ── Description char counter ──
     const facilityDesc  = document.getElementById('facilityDesc');
@@ -1216,4 +1637,294 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    // ═══════════════════════════════════════════════════
+    //  BUSINESS REGISTRATION & APPROVALS LOGIC
+    // ═══════════════════════════════════════════════════
+
+    // 1. Navigation & Setup
+    const btnEmptyRegister = document.getElementById('btn-empty-register-biz');
+    if (btnEmptyRegister) {
+        btnEmptyRegister.addEventListener('click', () => {
+            document.getElementById('form-register-business').reset();
+            delete document.getElementById('form-register-business').dataset.editId;
+            document.getElementById('reg-rejection-notice').classList.add('hidden');
+            navigateToView('view-register-business');
+        });
+    }
+
+    const btnCancelRegister = document.getElementById('btn-cancel-register');
+    if (btnCancelRegister) {
+        btnCancelRegister.addEventListener('click', () => {
+            navigateToView('view-business-management');
+        });
+    }
+
+    // Handle "Fix & Resubmit" clicks
+    document.addEventListener('click', (e) => {
+        const retryBtn = e.target.closest('.retry-biz-btn');
+        if (retryBtn) {
+            e.stopPropagation();
+            const id = retryBtn.dataset.id;
+            const name = retryBtn.dataset.name;
+            const contact = retryBtn.dataset.contact;
+            const phone = retryBtn.dataset.phone;
+            const gst = retryBtn.dataset.gst;
+            const address = retryBtn.dataset.address;
+            const reason = retryBtn.dataset.reason;
+
+            const form = document.getElementById('form-register-business');
+            form.dataset.editId = id;
+            document.getElementById('regBizName').value = name;
+            document.getElementById('regBizContactName').value = contact;
+            document.getElementById('regBizContactPhone').value = phone;
+            document.getElementById('regBizGst').value = gst;
+            document.getElementById('regBizAddress').value = address;
+            
+            const notice = document.getElementById('reg-rejection-notice');
+            document.getElementById('reg-rejection-reason').textContent = reason || 'No specific reason provided.';
+            notice.classList.remove('hidden');
+
+            navigateToView('view-register-business');
+        }
+    });
+
+    // 2. Submit Registration Form
+    const registerForm = document.getElementById('form-register-business');
+    if (registerForm) {
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('gt_token');
+            if (!token) return;
+
+            const payload = {
+                name: document.getElementById('regBizName').value.trim(),
+                contact_name: document.getElementById('regBizContactName').value.trim(),
+                contact_phone: document.getElementById('regBizContactPhone').value.trim(),
+                gst_vat: document.getElementById('regBizGst').value.trim(),
+                registered_address: document.getElementById('regBizAddress').value.trim()
+            };
+
+            if (registerForm.dataset.editId) {
+                payload.bizId = registerForm.dataset.editId;
+            }
+
+            const btn = document.getElementById('btn-submit-register');
+            const text = btn.querySelector('.btn-text');
+            const loader = btn.querySelector('.btn-loader');
+            text.classList.add('hidden');
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+
+            fetch('/businesses/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                text.classList.remove('hidden');
+                loader.classList.add('hidden');
+                btn.disabled = false;
+
+                if (data.success) {
+                    showToast(registerForm.dataset.editId ? 'Application Resubmitted!' : 'Application Sent for Review!');
+                    navigateToView('view-business-management');
+                    fetchBusinesses();
+                } else {
+                    showToast('Error: ' + (data.message || 'Could not register business.'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                text.classList.remove('hidden');
+                loader.classList.add('hidden');
+                btn.disabled = false;
+                showToast('Server error. Please try again later.');
+            });
+        });
+    }
+
+    // 3. Admin Approvals Flow
+    window.fetchApprovals = function() {
+        const token = localStorage.getItem('gt_token');
+        if (!token) return;
+
+        fetch('/admin/approvals', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                renderApprovalsList(data.approvals);
+            }
+        })
+        .catch(err => console.error('Error fetching approvals:', err));
+    };
+
+    function renderApprovalsList(approvals) {
+        const listGrid = document.getElementById('approvals-list-grid');
+        const emptyState = document.getElementById('approvals-empty-state');
+        
+        if (!listGrid) return;
+        listGrid.innerHTML = '';
+
+        if (approvals.length === 0) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            listGrid.classList.add('hidden');
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+        listGrid.classList.remove('hidden');
+
+        approvals.forEach(appr => {
+            const card = document.createElement('div');
+            card.className = 'business-card';
+            card.innerHTML = `
+                <div class="biz-card-header">
+                    <div class="biz-icon-wrapper"><i class="ph-fill ph-clipboard-text"></i></div>
+                    <div class="biz-badge badge-warning">Pending Review</div>
+                </div>
+                <div class="biz-card-body" style="gap: 0.5rem;">
+                    <div class="biz-name" style="margin-bottom: 0.5rem;">${appr.name}</div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-user"></i> Contact: ${appr.contact_name}
+                    </div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-phone"></i> Phone: ${appr.contact_phone}
+                    </div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-identification-card"></i> GST/VAT: ${appr.gst_vat}
+                    </div>
+                    <div class="biz-owner" style="font-size: 0.9rem;">
+                        <i class="ph ph-map-pin"></i> Address: ${appr.registered_address}
+                    </div>
+                    <div class="meta-item" style="margin-top: 0.5rem;">
+                        <i class="ph ph-calendar"></i>
+                        <span>Submitted ${new Date(appr.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                <div class="biz-card-footer">
+                    <div class="biz-actions" style="justify-content: flex-end; gap: 0.5rem;">
+                        <button class="submit-btn" style="background: var(--danger); border-color: var(--danger); padding: 0.5rem 1rem; border-radius: 8px;" onclick="promptReject(${appr.id})">
+                            <span class="btn-text">Reject</span>
+                        </button>
+                        <button class="submit-btn primary-action-btn" style="padding: 0.5rem 1rem; border-radius: 8px;" onclick="approveBusiness(${appr.id})">
+                            <span class="btn-text">Approve</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            listGrid.appendChild(card);
+        });
+    }
+
+    let currentApproveId = null;
+    window.approveBusiness = function(id) {
+        currentApproveId = id;
+        const commentInput = document.getElementById('approve-comment-input');
+        if (commentInput) commentInput.value = '';
+        const modal = document.getElementById('approve-modal');
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    const btnCancelApprove = document.getElementById('btn-cancel-approve');
+    if (btnCancelApprove) {
+        btnCancelApprove.addEventListener('click', () => {
+            document.getElementById('approve-modal').classList.add('hidden');
+            currentApproveId = null;
+        });
+    }
+
+    const btnConfirmApprove = document.getElementById('btn-confirm-approve');
+    if (btnConfirmApprove) {
+        btnConfirmApprove.addEventListener('click', () => {
+            if (!currentApproveId) return;
+            const comment = document.getElementById('approve-comment-input').value.trim();
+            const token = localStorage.getItem('gt_token');
+            
+            const btn = document.getElementById('btn-confirm-approve');
+            const originalText = btn.querySelector('.btn-text').textContent;
+            btn.querySelector('.btn-text').textContent = 'Approving...';
+            btn.disabled = true;
+
+            fetch('/admin/approvals/' + currentApproveId + '/approve', {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ comment })
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('approve-modal').classList.add('hidden');
+                if (data.success) {
+                    showToast('Business Approved!');
+                    fetchApprovals();
+                } else {
+                    showToast('Error approving business.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Server error.');
+            })
+            .finally(() => {
+                btn.querySelector('.btn-text').textContent = originalText;
+                btn.disabled = false;
+                currentApproveId = null;
+            });
+        });
+    }
+
+    let currentRejectId = null;
+    window.promptReject = function(id) {
+        currentRejectId = id;
+        document.getElementById('reject-reason-input').value = '';
+        document.getElementById('reject-modal').classList.remove('hidden');
+    };
+
+    const btnCancelReject = document.getElementById('btn-cancel-reject');
+    if (btnCancelReject) {
+        btnCancelReject.addEventListener('click', () => {
+            document.getElementById('reject-modal').classList.add('hidden');
+            currentRejectId = null;
+        });
+    }
+
+    const btnConfirmReject = document.getElementById('btn-confirm-reject');
+    if (btnConfirmReject) {
+        btnConfirmReject.addEventListener('click', () => {
+            if (!currentRejectId) return;
+            const reason = document.getElementById('reject-reason-input').value.trim();
+            if (!reason) {
+                showToast('Please provide a reason for rejection.');
+                return;
+            }
+
+            const token = localStorage.getItem('gt_token');
+            fetch('/admin/approvals/' + currentRejectId + '/reject', {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ reason })
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('reject-modal').classList.add('hidden');
+                if (data.success) {
+                    showToast('Business Rejected.');
+                    fetchApprovals();
+                } else {
+                    showToast('Error rejecting business.');
+                }
+            });
+        });
+    }
 });
